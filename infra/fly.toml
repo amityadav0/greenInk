@@ -1,0 +1,29 @@
+# Fly.io deploy for api + worker from infra/Dockerfile (lane C may switch to Railway).
+# Secrets (NEBIUS_API_KEY, TAVILY_API_KEY, DATABASE_URL, REDIS_URL, R2_*, SESSION_SECRET)
+# are set with `fly secrets set`, never here.
+app = "greenink"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  release_command = "migrate"
+
+[processes]
+  api = "api"
+  worker = "worker --queues all"
+
+[http_service]
+  processes = ["api"]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/readyz"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "15s"

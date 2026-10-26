@@ -101,12 +101,14 @@ services:
     command: ["sh", "-c", "corepack enable && pnpm install --frozen-lockfile && pnpm dev --hostname 0.0.0.0"]
     environment:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      npm_config_store_dir: /pnpm-store  # keep the package store out of the mounted source
       NEXT_PUBLIC_API_URL: http://localhost:8000
     ports: ["3000:3000"]
     volumes:
       - ./apps/web:/app
       - web_node_modules:/app/node_modules
       - web_next:/app/.next
+      - web_pnpm_store:/pnpm-store
     depends_on:
       api: {condition: service_healthy}
 
@@ -115,3 +117,4 @@ volumes:
   miniodata:
   web_node_modules:
   web_next:
+  web_pnpm_store:
