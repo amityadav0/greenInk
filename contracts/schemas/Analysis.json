@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "AnalysisStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "done",
+        "partial",
+        "failed"
+      ],
+      "title": "AnalysisStatus",
+      "type": "string"
+    },
+    "Verdict": {
+      "enum": [
+        "bid",
+        "fix_then_bid",
+        "skip"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "VerdictRule": {
+      "additionalProperties": false,
+      "description": "One verdict rule that fired, with the findings that triggered it.",
+      "properties": {
+        "finding_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "rule": {
+          "examples": [
+            "critical_unfixable",
+            "fixable_gap",
+            "no_blocking_gap"
+          ],
+          "title": "Rule",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "rule",
+        "verdict"
+      ],
+      "title": "VerdictRule",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One tender judged for one company. Cached by\n`(tender_id, company_id, profile_hash, requirements_version)`.",
+  "properties": {
+    "company_id": {
+      "format": "uuid",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "profile_hash": {
+      "title": "Profile Hash",
+      "type": "string"
+    },
+    "requirements_version": {
+      "title": "Requirements Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/AnalysisStatus"
+    },
+    "tender_id": {
+      "format": "uuid",
+      "title": "Tender Id",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "verdict": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Verdict"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "verdict_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Verdict Reason"
+    },
+    "verdict_rules": {
+      "items": {
+        "$ref": "#/$defs/VerdictRule"
+      },
+      "title": "Verdict Rules",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "tender_id",
+    "company_id",
+    "status",
+    "profile_hash",
+    "requirements_version",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "Analysis",
+  "type": "object"
+}

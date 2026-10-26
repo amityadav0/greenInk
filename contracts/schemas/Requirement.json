@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "RequirementCategory": {
+      "enum": [
+        "turnover",
+        "experience",
+        "mse_exemption",
+        "startup_exemption",
+        "oem_authorisation",
+        "bis_certification",
+        "type_test",
+        "emd",
+        "epbg",
+        "document",
+        "delivery",
+        "atc",
+        "boq_format",
+        "other"
+      ],
+      "title": "RequirementCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A requirement extracted from a tender document. Shared by every company.",
+  "properties": {
+    "category": {
+      "$ref": "#/$defs/RequirementCategory"
+    },
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    },
+    "extractor_version": {
+      "title": "Extractor Version",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "page_no": {
+      "description": "1-based page number in the source PDF.",
+      "minimum": 1,
+      "title": "Page No",
+      "type": "integer"
+    },
+    "quote": {
+      "description": "Verbatim text from the cited page.",
+      "title": "Quote",
+      "type": "string"
+    },
+    "text": {
+      "description": "The requirement, restated in one plain sentence.",
+      "title": "Text",
+      "type": "string"
+    },
+    "verified": {
+      "description": "True when the quote fuzzy-matches the cited page.",
+      "title": "Verified",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "document_id",
+    "extractor_version",
+    "category",
+    "text",
+    "page_no",
+    "quote",
+    "verified"
+  ],
+  "title": "Requirement",
+  "type": "object"
+}

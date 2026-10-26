@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "Stage": {
+      "description": "Pipeline stages (SPEC \"Pipeline and jobs\").",
+      "enum": [
+        "ingest",
+        "parse",
+        "extract",
+        "verify",
+        "judge",
+        "verdict",
+        "intel",
+        "triage"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "StageState": {
+      "enum": [
+        "queued",
+        "running",
+        "retrying",
+        "done",
+        "skipped",
+        "failed"
+      ],
+      "title": "StageState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Stage progress; stored in `job_events` and streamed over SSE.",
+  "properties": {
+    "analysis_id": {
+      "format": "uuid",
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "at": {
+      "format": "date-time",
+      "title": "At",
+      "type": "string"
+    },
+    "message": {
+      "examples": [
+        "Reading 64 pages\u2026",
+        "41 requirements found"
+      ],
+      "title": "Message",
+      "type": "string"
+    },
+    "stage": {
+      "$ref": "#/$defs/Stage"
+    },
+    "state": {
+      "$ref": "#/$defs/StageState"
+    }
+  },
+  "required": [
+    "analysis_id",
+    "stage",
+    "state",
+    "message",
+    "at"
+  ],
+  "title": "JobEvent",
+  "type": "object"
+}

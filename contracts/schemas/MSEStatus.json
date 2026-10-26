@@ -1,0 +1,36 @@
+{
+  "$defs": {
+    "MSECategory": {
+      "enum": [
+        "micro",
+        "small",
+        "medium"
+      ],
+      "title": "MSECategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "category": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MSECategory"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "udyam_registered": {
+      "title": "Udyam Registered",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "udyam_registered"
+  ],
+  "title": "MSEStatus",
+  "type": "object"
+}

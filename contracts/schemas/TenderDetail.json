@@ -1,0 +1,169 @@
+{
+  "$defs": {
+    "Tender": {
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Buyer"
+        },
+        "closes_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Closes At"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "meta": {
+          "additionalProperties": true,
+          "description": "Source-specific fields.",
+          "title": "Meta",
+          "type": "object"
+        },
+        "official_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Official page of the bid; every bid links back to its source.",
+          "title": "Official Url"
+        },
+        "source": {
+          "$ref": "#/$defs/TenderSource"
+        },
+        "source_ref": {
+          "description": "The source's own id, e.g. a GeM bid number.",
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "value_inr": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Estimated bid value, when published.",
+          "title": "Value Inr"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "source_ref",
+        "title"
+      ],
+      "title": "Tender",
+      "type": "object"
+    },
+    "TenderDocumentOut": {
+      "additionalProperties": false,
+      "properties": {
+        "download_url": {
+          "description": "Short-lived signed URL to the PDF.",
+          "title": "Download Url",
+          "type": "string"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "page_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page Count"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "sha256",
+        "filename",
+        "download_url"
+      ],
+      "title": "TenderDocumentOut",
+      "type": "object"
+    },
+    "TenderSource": {
+      "description": "Where a tender came from. One value per `sources` adapter.",
+      "enum": [
+        "gem",
+        "upload"
+      ],
+      "title": "TenderSource",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "documents": {
+      "items": {
+        "$ref": "#/$defs/TenderDocumentOut"
+      },
+      "title": "Documents",
+      "type": "array"
+    },
+    "tender": {
+      "$ref": "#/$defs/Tender"
+    }
+  },
+  "required": [
+    "tender",
+    "documents"
+  ],
+  "title": "TenderDetail",
+  "type": "object"
+}

@@ -1,0 +1,17 @@
+# config/sources.yaml  (enabled tender sources and their limits; read only by greenink.sources)
+adapters:
+  gem:
+    enabled: true
+    base_url: https://bidplus.gem.gov.in
+    rate_limit_rps: 1            # polite rate; GeM is public infrastructure
+    timeout_s: 30
+    max_retries: 3
+    user_agent: "GreenInk/0.1 (+https://github.com/amityadav0/greenInk; tender research tool)"
+    search_cache_ttl_s: 1800     # search cache key: (adapter, normalised query)
+    max_results: 50
+  upload:
+    enabled: true
+    max_bytes: 26214400          # 25 MB
+    allowed_types: [application/pdf, image/png, image/jpeg]  # checked from the file's bytes
+  cppp:
+    enabled: false               # search sits behind a captcha; use upload instead

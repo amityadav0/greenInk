@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "company_has": {
+          "description": "What the company has against this requirement, in one line.",
+          "title": "Company Has",
+          "type": "string"
+        },
+        "quotes": {
+          "items": {
+            "$ref": "#/$defs/EvidenceQuote"
+          },
+          "title": "Quotes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "company_has"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "EvidenceQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "company_document_id": {
+          "format": "uuid",
+          "title": "Company Document Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "description": "1-based page number in the source PDF.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "company_document_id",
+        "quote"
+      ],
+      "title": "EvidenceQuote",
+      "type": "object"
+    },
+    "FindingStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "missing_proof",
+        "unclear"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Output of the `judge` task for one requirement.",
+  "properties": {
+    "evidence": {
+      "$ref": "#/$defs/Evidence"
+    },
+    "fixable_before_close": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fixable Before Close"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "requirement_id": {
+      "format": "uuid",
+      "title": "Requirement Id",
+      "type": "string"
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity"
+    },
+    "status": {
+      "$ref": "#/$defs/FindingStatus"
+    }
+  },
+  "required": [
+    "requirement_id",
+    "status",
+    "severity",
+    "reason",
+    "evidence"
+  ],
+  "title": "JudgedRequirement",
+  "type": "object"
+}

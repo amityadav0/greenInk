@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "observed_on": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observed On"
+    },
+    "price_inr": {
+      "anyOf": [
+        {
+          "description": "Amount in Indian rupees.",
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Price Inr"
+    },
+    "provider": {
+      "examples": [
+        "tavily",
+        "gem_results"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "snippet": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Snippet"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "url": {
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "url",
+    "provider"
+  ],
+  "title": "PriceSource",
+  "type": "object"
+}

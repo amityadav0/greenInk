@@ -1,0 +1,127 @@
+{
+  "$defs": {
+    "PriceSource": {
+      "additionalProperties": false,
+      "properties": {
+        "observed_on": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed On"
+        },
+        "price_inr": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Price Inr"
+        },
+        "provider": {
+          "examples": [
+            "tavily",
+            "gem_results"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snippet"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "url",
+        "provider"
+      ],
+      "title": "PriceSource",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": {
+      "format": "uuid",
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "band_high": {
+      "anyOf": [
+        {
+          "description": "Amount in Indian rupees.",
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Band High"
+    },
+    "band_low": {
+      "anyOf": [
+        {
+          "description": "Amount in Indian rupees.",
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Band Low"
+    },
+    "item": {
+      "title": "Item",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/PriceSource"
+      },
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "analysis_id",
+    "item"
+  ],
+  "title": "PriceIntel",
+  "type": "object"
+}

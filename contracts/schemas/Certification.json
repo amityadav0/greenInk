@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "CertificationKind": {
+      "enum": [
+        "bis",
+        "iso",
+        "type_test",
+        "nsic",
+        "other"
+      ],
+      "title": "CertificationKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "$ref": "#/$defs/CertificationKind"
+    },
+    "name": {
+      "description": "As written on the certificate, e.g. 'IS 16227'.",
+      "title": "Name",
+      "type": "string"
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scope"
+    },
+    "valid_until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid Until"
+    }
+  },
+  "required": [
+    "kind",
+    "name"
+  ],
+  "title": "Certification",
+  "type": "object"
+}

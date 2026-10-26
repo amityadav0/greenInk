@@ -1,0 +1,721 @@
+{
+  "$defs": {
+    "Analysis": {
+      "additionalProperties": false,
+      "description": "One tender judged for one company. Cached by\n`(tender_id, company_id, profile_hash, requirements_version)`.",
+      "properties": {
+        "company_id": {
+          "format": "uuid",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "profile_hash": {
+          "title": "Profile Hash",
+          "type": "string"
+        },
+        "requirements_version": {
+          "title": "Requirements Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalysisStatus"
+        },
+        "tender_id": {
+          "format": "uuid",
+          "title": "Tender Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "verdict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Verdict"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "verdict_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verdict Reason"
+        },
+        "verdict_rules": {
+          "items": {
+            "$ref": "#/$defs/VerdictRule"
+          },
+          "title": "Verdict Rules",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "tender_id",
+        "company_id",
+        "status",
+        "profile_hash",
+        "requirements_version",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "Analysis",
+      "type": "object"
+    },
+    "AnalysisStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "done",
+        "partial",
+        "failed"
+      ],
+      "title": "AnalysisStatus",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "company_has": {
+          "description": "What the company has against this requirement, in one line.",
+          "title": "Company Has",
+          "type": "string"
+        },
+        "quotes": {
+          "items": {
+            "$ref": "#/$defs/EvidenceQuote"
+          },
+          "title": "Quotes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "company_has"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "EvidenceQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "company_document_id": {
+          "format": "uuid",
+          "title": "Company Document Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "description": "1-based page number in the source PDF.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "company_document_id",
+        "quote"
+      ],
+      "title": "EvidenceQuote",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "format": "uuid",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "fix": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Fix"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fixable_before_close": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether the gap can be closed before the bid closes; feeds the verdict.",
+          "title": "Fixable Before Close"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why this status, in one or two sentences.",
+          "title": "Reason",
+          "type": "string"
+        },
+        "requirement": {
+          "$ref": "#/$defs/Requirement"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "status": {
+          "$ref": "#/$defs/FindingStatus"
+        }
+      },
+      "required": [
+        "id",
+        "analysis_id",
+        "requirement",
+        "status",
+        "severity",
+        "reason",
+        "evidence"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FindingStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "missing_proof",
+        "unclear"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "Fix": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "description": "Markdown: the letter, checklist or document request.",
+          "title": "Body",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixKind"
+        },
+        "steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "body"
+      ],
+      "title": "Fix",
+      "type": "object"
+    },
+    "FixKind": {
+      "enum": [
+        "letter",
+        "checklist",
+        "document_request"
+      ],
+      "title": "FixKind",
+      "type": "string"
+    },
+    "PriceIntel": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "format": "uuid",
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "band_high": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Band High"
+        },
+        "band_low": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Band Low"
+        },
+        "item": {
+          "title": "Item",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/PriceSource"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "analysis_id",
+        "item"
+      ],
+      "title": "PriceIntel",
+      "type": "object"
+    },
+    "PriceSource": {
+      "additionalProperties": false,
+      "properties": {
+        "observed_on": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed On"
+        },
+        "price_inr": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Price Inr"
+        },
+        "provider": {
+          "examples": [
+            "tavily",
+            "gem_results"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snippet"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "url",
+        "provider"
+      ],
+      "title": "PriceSource",
+      "type": "object"
+    },
+    "Requirement": {
+      "additionalProperties": false,
+      "description": "A requirement extracted from a tender document. Shared by every company.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/RequirementCategory"
+        },
+        "document_id": {
+          "format": "uuid",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "extractor_version": {
+          "title": "Extractor Version",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "page_no": {
+          "description": "1-based page number in the source PDF.",
+          "minimum": 1,
+          "title": "Page No",
+          "type": "integer"
+        },
+        "quote": {
+          "description": "Verbatim text from the cited page.",
+          "title": "Quote",
+          "type": "string"
+        },
+        "text": {
+          "description": "The requirement, restated in one plain sentence.",
+          "title": "Text",
+          "type": "string"
+        },
+        "verified": {
+          "description": "True when the quote fuzzy-matches the cited page.",
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "document_id",
+        "extractor_version",
+        "category",
+        "text",
+        "page_no",
+        "quote",
+        "verified"
+      ],
+      "title": "Requirement",
+      "type": "object"
+    },
+    "RequirementCategory": {
+      "enum": [
+        "turnover",
+        "experience",
+        "mse_exemption",
+        "startup_exemption",
+        "oem_authorisation",
+        "bis_certification",
+        "type_test",
+        "emd",
+        "epbg",
+        "document",
+        "delivery",
+        "atc",
+        "boq_format",
+        "other"
+      ],
+      "title": "RequirementCategory",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "Stage": {
+      "description": "Pipeline stages (SPEC \"Pipeline and jobs\").",
+      "enum": [
+        "ingest",
+        "parse",
+        "extract",
+        "verify",
+        "judge",
+        "verdict",
+        "intel",
+        "triage"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "StageState": {
+      "enum": [
+        "queued",
+        "running",
+        "retrying",
+        "done",
+        "skipped",
+        "failed"
+      ],
+      "title": "StageState",
+      "type": "string"
+    },
+    "StageStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "stage": {
+          "$ref": "#/$defs/Stage"
+        },
+        "state": {
+          "$ref": "#/$defs/StageState"
+        }
+      },
+      "required": [
+        "stage",
+        "state"
+      ],
+      "title": "StageStatus",
+      "type": "object"
+    },
+    "Tender": {
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Buyer"
+        },
+        "closes_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Closes At"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "meta": {
+          "additionalProperties": true,
+          "description": "Source-specific fields.",
+          "title": "Meta",
+          "type": "object"
+        },
+        "official_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Official page of the bid; every bid links back to its source.",
+          "title": "Official Url"
+        },
+        "source": {
+          "$ref": "#/$defs/TenderSource"
+        },
+        "source_ref": {
+          "description": "The source's own id, e.g. a GeM bid number.",
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "value_inr": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Estimated bid value, when published.",
+          "title": "Value Inr"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "source_ref",
+        "title"
+      ],
+      "title": "Tender",
+      "type": "object"
+    },
+    "TenderSource": {
+      "description": "Where a tender came from. One value per `sources` adapter.",
+      "enum": [
+        "gem",
+        "upload"
+      ],
+      "title": "TenderSource",
+      "type": "string"
+    },
+    "Verdict": {
+      "enum": [
+        "bid",
+        "fix_then_bid",
+        "skip"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "VerdictRule": {
+      "additionalProperties": false,
+      "description": "One verdict rule that fired, with the findings that triggered it.",
+      "properties": {
+        "finding_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Finding Ids",
+          "type": "array"
+        },
+        "rule": {
+          "examples": [
+            "critical_unfixable",
+            "fixable_gap",
+            "no_blocking_gap"
+          ],
+          "title": "Rule",
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/$defs/Verdict"
+        }
+      },
+      "required": [
+        "rule",
+        "verdict"
+      ],
+      "title": "VerdictRule",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The full report: verdict, findings, price intel and stage states.",
+  "properties": {
+    "analysis": {
+      "$ref": "#/$defs/Analysis"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "price_intel": {
+      "items": {
+        "$ref": "#/$defs/PriceIntel"
+      },
+      "title": "Price Intel",
+      "type": "array"
+    },
+    "stages": {
+      "items": {
+        "$ref": "#/$defs/StageStatus"
+      },
+      "title": "Stages",
+      "type": "array"
+    },
+    "tender": {
+      "$ref": "#/$defs/Tender"
+    }
+  },
+  "required": [
+    "analysis",
+    "tender",
+    "findings",
+    "price_intel",
+    "stages"
+  ],
+  "title": "AnalysisReport",
+  "type": "object"
+}

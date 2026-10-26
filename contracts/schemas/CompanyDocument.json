@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "CompanyDocumentKind": {
+      "enum": [
+        "udyam_certificate",
+        "gst_certificate",
+        "turnover_certificate",
+        "balance_sheet",
+        "bis_licence",
+        "iso_certificate",
+        "type_test_report",
+        "oem_authorisation",
+        "experience_certificate",
+        "startup_recognition",
+        "other"
+      ],
+      "title": "CompanyDocumentKind",
+      "type": "string"
+    },
+    "CompanyFact": {
+      "additionalProperties": false,
+      "description": "A fact read from a company document, with where it was found.",
+      "properties": {
+        "key": {
+          "examples": [
+            "business_nature_wording",
+            "annual_turnover.2024-25"
+          ],
+          "title": "Key",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "description": "1-based page number in the source PDF.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "title": "CompanyFact",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "company_id": {
+      "format": "uuid",
+      "title": "Company Id",
+      "type": "string"
+    },
+    "facts": {
+      "items": {
+        "$ref": "#/$defs/CompanyFact"
+      },
+      "title": "Facts",
+      "type": "array"
+    },
+    "filename": {
+      "title": "Filename",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/CompanyDocumentKind"
+    }
+  },
+  "required": [
+    "id",
+    "company_id",
+    "kind",
+    "filename"
+  ],
+  "title": "CompanyDocument",
+  "type": "object"
+}

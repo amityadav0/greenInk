@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "filename": {
+      "title": "Filename",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "page_count": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page Count"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "tender_id": {
+      "format": "uuid",
+      "title": "Tender Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "tender_id",
+    "sha256",
+    "filename"
+  ],
+  "title": "TenderDocument",
+  "type": "object"
+}

@@ -1,0 +1,180 @@
+{
+  "$defs": {
+    "AnalysisStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "done",
+        "partial",
+        "failed"
+      ],
+      "title": "AnalysisStatus",
+      "type": "string"
+    },
+    "LLMCall": {
+      "additionalProperties": false,
+      "description": "One row of the Model Trace.",
+      "properties": {
+        "analysis_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analysis Id"
+        },
+        "cost_usd": {
+          "minimum": 0,
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "model": {
+          "description": "The model that actually answered (after any fallback).",
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_hash": {
+          "title": "Prompt Hash",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/LLMCallStatus"
+        },
+        "task": {
+          "$ref": "#/$defs/LLMTask"
+        },
+        "tokens_in": {
+          "minimum": 0,
+          "title": "Tokens In",
+          "type": "integer"
+        },
+        "tokens_out": {
+          "minimum": 0,
+          "title": "Tokens Out",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "task",
+        "model",
+        "tokens_in",
+        "tokens_out",
+        "cost_usd",
+        "latency_ms",
+        "status",
+        "prompt_hash",
+        "created_at"
+      ],
+      "title": "LLMCall",
+      "type": "object"
+    },
+    "LLMCallStatus": {
+      "enum": [
+        "ok",
+        "cached",
+        "invalid_output",
+        "timeout",
+        "error",
+        "budget_exceeded"
+      ],
+      "title": "LLMCallStatus",
+      "type": "string"
+    },
+    "LLMTask": {
+      "description": "Gateway tasks; each maps to a model in `config/models.yaml`.",
+      "enum": [
+        "triage",
+        "profile_url",
+        "extract",
+        "page_vision",
+        "judge",
+        "fix"
+      ],
+      "title": "LLMTask",
+      "type": "string"
+    },
+    "TraceTotals": {
+      "additionalProperties": false,
+      "properties": {
+        "cost_usd": {
+          "minimum": 0,
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "tokens_in": {
+          "minimum": 0,
+          "title": "Tokens In",
+          "type": "integer"
+        },
+        "tokens_out": {
+          "minimum": 0,
+          "title": "Tokens Out",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tokens_in",
+        "tokens_out",
+        "cost_usd",
+        "latency_ms"
+      ],
+      "title": "TraceTotals",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": {
+      "format": "uuid",
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "calls": {
+      "items": {
+        "$ref": "#/$defs/LLMCall"
+      },
+      "title": "Calls",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/AnalysisStatus"
+    },
+    "totals": {
+      "$ref": "#/$defs/TraceTotals"
+    }
+  },
+  "required": [
+    "analysis_id",
+    "status",
+    "calls",
+    "totals"
+  ],
+  "title": "AnalysisTrace",
+  "type": "object"
+}

@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "PageMethod": {
+      "description": "How a page's text was obtained.",
+      "enum": [
+        "text",
+        "vision"
+      ],
+      "title": "PageMethod",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    },
+    "method": {
+      "$ref": "#/$defs/PageMethod"
+    },
+    "page_no": {
+      "description": "1-based page number in the source PDF.",
+      "minimum": 1,
+      "title": "Page No",
+      "type": "integer"
+    },
+    "text": {
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "document_id",
+    "page_no",
+    "text",
+    "method"
+  ],
+  "title": "Page",
+  "type": "object"
+}

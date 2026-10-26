@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "amount_inr": {
+      "description": "Amount in Indian rupees.",
+      "minimum": 0,
+      "title": "Amount Inr",
+      "type": "number"
+    },
+    "fiscal_year": {
+      "examples": [
+        "2024-25"
+      ],
+      "pattern": "^\\d{4}-\\d{2}$",
+      "title": "Fiscal Year",
+      "type": "string"
+    }
+  },
+  "required": [
+    "fiscal_year",
+    "amount_inr"
+  ],
+  "title": "TurnoverYear",
+  "type": "object"
+}

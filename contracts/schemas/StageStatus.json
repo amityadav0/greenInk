@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "Stage": {
+      "description": "Pipeline stages (SPEC \"Pipeline and jobs\").",
+      "enum": [
+        "ingest",
+        "parse",
+        "extract",
+        "verify",
+        "judge",
+        "verdict",
+        "intel",
+        "triage"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "StageState": {
+      "enum": [
+        "queued",
+        "running",
+        "retrying",
+        "done",
+        "skipped",
+        "failed"
+      ],
+      "title": "StageState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    },
+    "stage": {
+      "$ref": "#/$defs/Stage"
+    },
+    "state": {
+      "$ref": "#/$defs/StageState"
+    }
+  },
+  "required": [
+    "stage",
+    "state"
+  ],
+  "title": "StageStatus",
+  "type": "object"
+}

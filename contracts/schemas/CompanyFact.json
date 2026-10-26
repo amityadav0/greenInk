@@ -1,0 +1,50 @@
+{
+  "additionalProperties": false,
+  "description": "A fact read from a company document, with where it was found.",
+  "properties": {
+    "key": {
+      "examples": [
+        "business_nature_wording",
+        "annual_turnover.2024-25"
+      ],
+      "title": "Key",
+      "type": "string"
+    },
+    "page_no": {
+      "anyOf": [
+        {
+          "description": "1-based page number in the source PDF.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page No"
+    },
+    "quote": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quote"
+    },
+    "value": {
+      "title": "Value",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ],
+  "title": "CompanyFact",
+  "type": "object"
+}

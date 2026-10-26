@@ -1,0 +1,70 @@
+{
+  "$defs": {
+    "ExtractedRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/RequirementCategory"
+        },
+        "page_no": {
+          "description": "1-based page number in the source PDF.",
+          "minimum": 1,
+          "title": "Page No",
+          "type": "integer"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "text",
+        "page_no",
+        "quote"
+      ],
+      "title": "ExtractedRequirement",
+      "type": "object"
+    },
+    "RequirementCategory": {
+      "enum": [
+        "turnover",
+        "experience",
+        "mse_exemption",
+        "startup_exemption",
+        "oem_authorisation",
+        "bis_certification",
+        "type_test",
+        "emd",
+        "epbg",
+        "document",
+        "delivery",
+        "atc",
+        "boq_format",
+        "other"
+      ],
+      "title": "RequirementCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Output of the `extract` task for one document.",
+  "properties": {
+    "requirements": {
+      "items": {
+        "$ref": "#/$defs/ExtractedRequirement"
+      },
+      "title": "Requirements",
+      "type": "array"
+    }
+  },
+  "required": [
+    "requirements"
+  ],
+  "title": "ExtractionResult",
+  "type": "object"
+}

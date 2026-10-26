@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "FixKind": {
+      "enum": [
+        "letter",
+        "checklist",
+        "document_request"
+      ],
+      "title": "FixKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "body": {
+      "description": "Markdown: the letter, checklist or document request.",
+      "title": "Body",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/FixKind"
+    },
+    "steps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "title",
+    "body"
+  ],
+  "title": "Fix",
+  "type": "object"
+}

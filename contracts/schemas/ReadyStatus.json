@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "examples": [
+        {
+          "postgres": true,
+          "redis": true
+        }
+      ],
+      "title": "Checks",
+      "type": "object"
+    },
+    "status": {
+      "const": "ok",
+      "default": "ok",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "checks"
+  ],
+  "title": "ReadyStatus",
+  "type": "object"
+}

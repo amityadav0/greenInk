@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "description": "`code` values in the `{code, message, retryable}` error shape.",
+      "enum": [
+        "bad_request",
+        "validation_error",
+        "not_found",
+        "conflict",
+        "payload_too_large",
+        "unsupported_media_type",
+        "rate_limited",
+        "budget_exceeded",
+        "not_implemented",
+        "upstream_unavailable",
+        "not_ready",
+        "internal"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The one error shape. The web app shows `message` to users as written.",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/ErrorCode"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "retryable": {
+      "title": "Retryable",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "code",
+    "message",
+    "retryable"
+  ],
+  "title": "ErrorBody",
+  "type": "object"
+}

@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "company_document_id": {
+      "format": "uuid",
+      "title": "Company Document Id",
+      "type": "string"
+    },
+    "page_no": {
+      "anyOf": [
+        {
+          "description": "1-based page number in the source PDF.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Page No"
+    },
+    "quote": {
+      "title": "Quote",
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_document_id",
+    "quote"
+  ],
+  "title": "EvidenceQuote",
+  "type": "object"
+}

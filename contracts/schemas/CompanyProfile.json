@@ -1,0 +1,326 @@
+{
+  "$defs": {
+    "BusinessNature": {
+      "description": "What the company's papers say it does; tenders often require `manufacturer`.",
+      "enum": [
+        "manufacturer",
+        "trader",
+        "service_provider",
+        "unknown"
+      ],
+      "title": "BusinessNature",
+      "type": "string"
+    },
+    "Certification": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/CertificationKind"
+        },
+        "name": {
+          "description": "As written on the certificate, e.g. 'IS 16227'.",
+          "title": "Name",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "valid_until": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "title": "Certification",
+      "type": "object"
+    },
+    "CertificationKind": {
+      "enum": [
+        "bis",
+        "iso",
+        "type_test",
+        "nsic",
+        "other"
+      ],
+      "title": "CertificationKind",
+      "type": "string"
+    },
+    "MSECategory": {
+      "enum": [
+        "micro",
+        "small",
+        "medium"
+      ],
+      "title": "MSECategory",
+      "type": "string"
+    },
+    "MSEStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MSECategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "udyam_registered": {
+          "title": "Udyam Registered",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "udyam_registered"
+      ],
+      "title": "MSEStatus",
+      "type": "object"
+    },
+    "PastSupply": {
+      "additionalProperties": false,
+      "properties": {
+        "buyer": {
+          "title": "Buyer",
+          "type": "string"
+        },
+        "item": {
+          "title": "Item",
+          "type": "string"
+        },
+        "quantity": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quantity"
+        },
+        "value_inr": {
+          "anyOf": [
+            {
+              "description": "Amount in Indian rupees.",
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Inr"
+        },
+        "year": {
+          "anyOf": [
+            {
+              "maximum": 2100,
+              "minimum": 1900,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Year"
+        }
+      },
+      "required": [
+        "buyer",
+        "item"
+      ],
+      "title": "PastSupply",
+      "type": "object"
+    },
+    "TurnoverYear": {
+      "additionalProperties": false,
+      "properties": {
+        "amount_inr": {
+          "description": "Amount in Indian rupees.",
+          "minimum": 0,
+          "title": "Amount Inr",
+          "type": "number"
+        },
+        "fiscal_year": {
+          "examples": [
+            "2024-25"
+          ],
+          "pattern": "^\\d{4}-\\d{2}$",
+          "title": "Fiscal Year",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fiscal_year",
+        "amount_inr"
+      ],
+      "title": "TurnoverYear",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What judging compares each requirement against.",
+  "properties": {
+    "annual_turnover": {
+      "items": {
+        "$ref": "#/$defs/TurnoverYear"
+      },
+      "title": "Annual Turnover",
+      "type": "array"
+    },
+    "business_nature": {
+      "$ref": "#/$defs/BusinessNature",
+      "default": "unknown"
+    },
+    "business_nature_wording": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Exact wording on the company's papers, e.g. 'Trading Business'.",
+      "title": "Business Nature Wording"
+    },
+    "certifications": {
+      "items": {
+        "$ref": "#/$defs/Certification"
+      },
+      "title": "Certifications",
+      "type": "array"
+    },
+    "constitution": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "examples": [
+        "proprietorship",
+        "private_limited"
+      ],
+      "title": "Constitution"
+    },
+    "legal_name": {
+      "title": "Legal Name",
+      "type": "string"
+    },
+    "msme": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MSEStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "oem_authorisations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Oem Authorisations",
+      "type": "array"
+    },
+    "past_supplies": {
+      "items": {
+        "$ref": "#/$defs/PastSupply"
+      },
+      "title": "Past Supplies",
+      "type": "array"
+    },
+    "products": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Products",
+      "type": "array"
+    },
+    "startup_recognised": {
+      "default": false,
+      "title": "Startup Recognised",
+      "type": "boolean"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "State"
+    },
+    "website": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Website"
+    },
+    "years_in_operation": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Years In Operation"
+    }
+  },
+  "required": [
+    "legal_name"
+  ],
+  "title": "CompanyProfile",
+  "type": "object"
+}

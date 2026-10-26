@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "TriageBadge": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "$ref": "#/$defs/TriageLevel"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "reason"
+      ],
+      "title": "TriageBadge",
+      "type": "object"
+    },
+    "TriageLevel": {
+      "description": "Win-ability badge on a search result.",
+      "enum": [
+        "green",
+        "amber",
+        "red"
+      ],
+      "title": "TriageLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "SSE `data` for `event: badge`. The stream ends with `event: done`.",
+  "properties": {
+    "badge": {
+      "$ref": "#/$defs/TriageBadge"
+    },
+    "search_id": {
+      "format": "uuid",
+      "title": "Search Id",
+      "type": "string"
+    },
+    "source_ref": {
+      "title": "Source Ref",
+      "type": "string"
+    }
+  },
+  "required": [
+    "search_id",
+    "source_ref",
+    "badge"
+  ],
+  "title": "SearchBadgeEvent",
+  "type": "object"
+}

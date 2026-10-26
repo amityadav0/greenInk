@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "description": "Returned with `202` for long work. Progress is on `events_url` when present.",
+  "properties": {
+    "cached": {
+      "default": false,
+      "description": "True when an existing result matched the cache key.",
+      "title": "Cached",
+      "type": "boolean"
+    },
+    "events_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Events Url"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "status_url": {
+      "title": "Status Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "status_url"
+  ],
+  "title": "Accepted",
+  "type": "object"
+}

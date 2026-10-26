@@ -1,0 +1,148 @@
+[project]
+name = "greenink"
+version = "0.1.0"
+description = "Green Ink domain package: find government tenders a small manufacturer can win, and the clauses that would get the bid rejected."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "arq>=0.28.0",
+    "boto3>=1.43.118",
+    "httpx>=0.28.1",
+    "openai>=3.37.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.14.1",
+    "pymupdf>=2.0",
+    "pyyaml>=6.0.3",
+    "rapidfuzz>=3.14.6",
+    "sqlalchemy[asyncio]>=2.1.6",
+    "structlog>=26.1.0",
+    "tavily-python>=0.8.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["packages/greenink"]
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/worker"]
+
+[dependency-groups]
+dev = [
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["apps/web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "PT", "T20", "N"]
+ignore = [
+    "S101",  # assert is fine in tests and for type narrowing
+    "RUF001", "RUF002", "RUF003",  # ellipses and dashes in user-facing text are intentional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T201"]   # scripts print their report
+"tests/*" = ["S", "T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["greenink", "greenink_api", "greenink_worker"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["packages", "apps/api", "apps/worker", "."]
+explicit_package_bases = true
+files = ["packages/greenink", "apps/api/greenink_api", "apps/worker/greenink_worker", "scripts", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["arq.*", "tavily.*", "fitz.*", "pymupdf.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["db: needs a reachable Postgres at DATABASE_URL (skipped otherwise)"]
+
+[tool.importlinter]
+root_packages = ["greenink", "greenink_api", "greenink_worker"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domain modules talk to each other only through ports (port.py; sources/base.py)"
+type = "independence"
+modules = [
+    "greenink.sources",
+    "greenink.docs",
+    "greenink.llm",
+    "greenink.analysis",
+    "greenink.companies",
+    "greenink.intel",
+    "greenink.triage",
+    "greenink.storage",
+    "greenink.jobs",
+]
+ignore_imports = [
+    "greenink.** -> greenink.*.port",
+    "greenink.** -> greenink.sources.base",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "core is the foundation: it imports no other greenink module"
+type = "forbidden"
+source_modules = ["greenink.core"]
+forbidden_modules = [
+    "greenink.sources", "greenink.docs", "greenink.llm", "greenink.analysis", "greenink.companies",
+    "greenink.intel", "greenink.triage", "greenink.storage", "greenink.jobs", "greenink.db",
+]
+
+[[tool.importlinter.contracts]]
+name = "db depends only on core"
+type = "forbidden"
+source_modules = ["greenink.db"]
+forbidden_modules = [
+    "greenink.sources", "greenink.docs", "greenink.llm", "greenink.analysis", "greenink.companies",
+    "greenink.intel", "greenink.triage", "greenink.storage", "greenink.jobs",
+]
+
+[[tool.importlinter.contracts]]
+name = "The domain never imports the apps; the apps never import each other"
+type = "independence"
+modules = ["greenink", "greenink_api", "greenink_worker"]
+ignore_imports = [
+    "greenink_api.** -> greenink.**",
+    "greenink_worker.** -> greenink.**",
+]
+
+[[tool.importlinter.contracts]]
+name = "Only greenink.llm imports an LLM SDK (AGENTS rule 2)"
+type = "forbidden"
+source_modules = [
+    "greenink.core", "greenink.sources", "greenink.docs", "greenink.analysis", "greenink.companies",
+    "greenink.intel", "greenink.triage", "greenink.storage", "greenink.jobs", "greenink.db",
+    "greenink_api", "greenink_worker",
+]
+forbidden_modules = ["openai", "httpx2"]
+
+[[tool.importlinter.contracts]]
+name = "Only intel and companies call Tavily (AGENTS rule 3)"
+type = "forbidden"
+source_modules = [
+    "greenink.core", "greenink.sources", "greenink.docs", "greenink.llm", "greenink.analysis",
+    "greenink.triage", "greenink.storage", "greenink.jobs", "greenink.db",
+    "greenink_api", "greenink_worker",
+]
+forbidden_modules = ["tavily"]

@@ -1,0 +1,261 @@
+{
+  "$defs": {
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "company_has": {
+          "description": "What the company has against this requirement, in one line.",
+          "title": "Company Has",
+          "type": "string"
+        },
+        "quotes": {
+          "items": {
+            "$ref": "#/$defs/EvidenceQuote"
+          },
+          "title": "Quotes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "company_has"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "EvidenceQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "company_document_id": {
+          "format": "uuid",
+          "title": "Company Document Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "description": "1-based page number in the source PDF.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "company_document_id",
+        "quote"
+      ],
+      "title": "EvidenceQuote",
+      "type": "object"
+    },
+    "FindingStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "missing_proof",
+        "unclear"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "Fix": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "description": "Markdown: the letter, checklist or document request.",
+          "title": "Body",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FixKind"
+        },
+        "steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "body"
+      ],
+      "title": "Fix",
+      "type": "object"
+    },
+    "FixKind": {
+      "enum": [
+        "letter",
+        "checklist",
+        "document_request"
+      ],
+      "title": "FixKind",
+      "type": "string"
+    },
+    "Requirement": {
+      "additionalProperties": false,
+      "description": "A requirement extracted from a tender document. Shared by every company.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/RequirementCategory"
+        },
+        "document_id": {
+          "format": "uuid",
+          "title": "Document Id",
+          "type": "string"
+        },
+        "extractor_version": {
+          "title": "Extractor Version",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "page_no": {
+          "description": "1-based page number in the source PDF.",
+          "minimum": 1,
+          "title": "Page No",
+          "type": "integer"
+        },
+        "quote": {
+          "description": "Verbatim text from the cited page.",
+          "title": "Quote",
+          "type": "string"
+        },
+        "text": {
+          "description": "The requirement, restated in one plain sentence.",
+          "title": "Text",
+          "type": "string"
+        },
+        "verified": {
+          "description": "True when the quote fuzzy-matches the cited page.",
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "document_id",
+        "extractor_version",
+        "category",
+        "text",
+        "page_no",
+        "quote",
+        "verified"
+      ],
+      "title": "Requirement",
+      "type": "object"
+    },
+    "RequirementCategory": {
+      "enum": [
+        "turnover",
+        "experience",
+        "mse_exemption",
+        "startup_exemption",
+        "oem_authorisation",
+        "bis_certification",
+        "type_test",
+        "emd",
+        "epbg",
+        "document",
+        "delivery",
+        "atc",
+        "boq_format",
+        "other"
+      ],
+      "title": "RequirementCategory",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": {
+      "format": "uuid",
+      "title": "Analysis Id",
+      "type": "string"
+    },
+    "evidence": {
+      "$ref": "#/$defs/Evidence"
+    },
+    "fix": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Fix"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "fixable_before_close": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Whether the gap can be closed before the bid closes; feeds the verdict.",
+      "title": "Fixable Before Close"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Why this status, in one or two sentences.",
+      "title": "Reason",
+      "type": "string"
+    },
+    "requirement": {
+      "$ref": "#/$defs/Requirement"
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity"
+    },
+    "status": {
+      "$ref": "#/$defs/FindingStatus"
+    }
+  },
+  "required": [
+    "id",
+    "analysis_id",
+    "requirement",
+    "status",
+    "severity",
+    "reason",
+    "evidence"
+  ],
+  "title": "Finding",
+  "type": "object"
+}

@@ -1,0 +1,60 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "buyer": {
+      "title": "Buyer",
+      "type": "string"
+    },
+    "item": {
+      "title": "Item",
+      "type": "string"
+    },
+    "quantity": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quantity"
+    },
+    "value_inr": {
+      "anyOf": [
+        {
+          "description": "Amount in Indian rupees.",
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value Inr"
+    },
+    "year": {
+      "anyOf": [
+        {
+          "maximum": 2100,
+          "minimum": 1900,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Year"
+    }
+  },
+  "required": [
+    "buyer",
+    "item"
+  ],
+  "title": "PastSupply",
+  "type": "object"
+}

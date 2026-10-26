@@ -1,0 +1,30 @@
+{
+  "$defs": {
+    "TriageLevel": {
+      "description": "Win-ability badge on a search result.",
+      "enum": [
+        "green",
+        "amber",
+        "red"
+      ],
+      "title": "TriageLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "level": {
+      "$ref": "#/$defs/TriageLevel"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "level",
+    "reason"
+  ],
+  "title": "TriageBadge",
+  "type": "object"
+}
