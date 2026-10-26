@@ -26,6 +26,9 @@ import httpx
 BASE_URL = "https://bidplus.gem.gov.in"
 USER_AGENT = "GreenInk/0.1 (+https://github.com/amityadav0/greenInk; tender research tool)"
 MIN_INTERVAL_S = 1.0
+MAX_ATTEMPTS = 3
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+SORTS = ("Bid-End-Date-Oldest", "Bid-End-Date-Latest", "Bid-Start-Date-Latest", "Bid-Start-Date-Oldest")
 PAGE_SIZE = 10
 CSRF_FIELD = "csrf_bd_gem_nk"
 CSRF_RE = re.compile(rf"'{CSRF_FIELD}'\s*:\s*'([0-9a-f]+)'")
@@ -60,13 +63,23 @@ class PoliteClient:
         self._last = 0.0
 
     def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
-        wait = self._last + MIN_INTERVAL_S - time.monotonic()
-        if wait > 0:
-            time.sleep(wait)
-        try:
-            return self._client.request(method, url, **kwargs)
-        finally:
-            self._last = time.monotonic()
+        """Rate-limited request; retries 429/5xx and network errors with exponential backoff."""
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            backoff = MIN_INTERVAL_S * 2 ** (attempt - 1)
+            wait = self._last + backoff - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                response = self._client.request(method, url, **kwargs)
+            except httpx.TransportError:
+                if attempt == MAX_ATTEMPTS:
+                    raise
+                continue
+            finally:
+                self._last = time.monotonic()
+            if response.status_code not in RETRY_STATUSES or attempt == MAX_ATTEMPTS:
+                return response
+        raise AssertionError("unreachable")
 
     def close(self) -> None:
         self._client.close()
@@ -75,14 +88,18 @@ class PoliteClient:
 def csrf_token(client: PoliteClient) -> str:
     page = client.request("GET", "/all-bids")
     page.raise_for_status()
-    match = CSRF_RE.search(page.text)
+    return parse_csrf(page.text)
+
+
+def parse_csrf(html: str) -> str:
+    match = CSRF_RE.search(html)
     if not match:
         raise RuntimeError("csrf token not found on /all-bids; the page layout may have changed")
     return match.group(1)
 
 
-def search(client: PoliteClient, token: str, query: str, page: int) -> tuple[int, list[dict[str, Any]]]:
-    payload = {
+def search_payload(query: str, page: int, *, sort: str) -> dict[str, Any]:
+    return {
         "page": page,
         "param": {"searchBid": query, "searchType": "fullText"},
         "filter": {
@@ -90,9 +107,22 @@ def search(client: PoliteClient, token: str, query: str, page: int) -> tuple[int
             "byType": "all",
             "highBidValue": "",
             "byEndDate": {"from": "", "to": ""},
-            "sort": "Bid-End-Date-Oldest",
+            "sort": sort,
         },
     }
+
+
+def parse_search(body: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    if body.get("code") != 200:
+        raise RuntimeError(f"all-bids-data answered code {body.get('code')}: {str(body)[:200]}")
+    result = body["response"]["response"]
+    return int(result["numFound"]), list(result["docs"])
+
+
+def search(
+    client: PoliteClient, token: str, query: str, page: int, *, sort: str = SORTS[0]
+) -> tuple[int, list[dict[str, Any]]]:
+    payload = search_payload(query, page, sort=sort)
     response = client.request(
         "POST",
         "/all-bids-data",
@@ -100,11 +130,7 @@ def search(client: PoliteClient, token: str, query: str, page: int) -> tuple[int
         headers={"X-Requested-With": "XMLHttpRequest", "Referer": f"{BASE_URL}/all-bids"},
     )
     response.raise_for_status()
-    body = response.json()
-    if body.get("code") != 200:
-        raise RuntimeError(f"all-bids-data answered code {body.get('code')}: {str(body)[:200]}")
-    result = body["response"]["response"]
-    return int(result["numFound"]), list(result["docs"])
+    return parse_search(response.json())
 
 
 def to_bid(doc: dict[str, Any]) -> Bid:
@@ -131,6 +157,10 @@ def to_bid(doc: dict[str, Any]) -> Bid:
         document_url=document_url,
         official_url=document_url,
     )
+
+
+def title_matches(bid: Bid, query: str) -> bool:
+    return " ".join(query.lower().split()) in " ".join(bid.title.lower().split())
 
 
 def _gem_time(value: Any) -> str:
@@ -162,6 +192,15 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=10, help="bids to print and download (default 10)")
     parser.add_argument("--out", type=Path, default=Path("data/raw"), help="download folder (git-ignored)")
     parser.add_argument("--no-download", action="store_true", help="search only")
+    parser.add_argument(
+        "--title-match",
+        action="store_true",
+        help="keep only bids whose title contains the query (GeM's own exact mode answers 404)",
+    )
+    parser.add_argument(
+        "--max-pages", type=int, default=20, help="stop after this many result pages (default 20)"
+    )
+    parser.add_argument("--sort", choices=SORTS, default=SORTS[0], help="result order")
     args = parser.parse_args()
 
     client = PoliteClient()
@@ -171,14 +210,17 @@ def main() -> int:
         bids: list[Bid] = []
         total, page = 0, 1
         while len(bids) < args.limit:
-            total, docs = search(client, token, args.query, page)
-            bids.extend(to_bid(doc) for doc in docs)
-            if len(docs) < PAGE_SIZE:
+            total, docs = search(client, token, args.query, page, sort=args.sort)
+            found = [to_bid(doc) for doc in docs]
+            bids.extend(b for b in found if not args.title_match or title_matches(b, args.query))
+            if len(docs) < PAGE_SIZE or page * PAGE_SIZE >= total or page >= args.max_pages:
                 break
             page += 1
         bids = bids[: args.limit]
 
-        print(f"GeM bidplus: {total} ongoing bids match {args.query!r}; showing {len(bids)}\n")
+        scope = "title-matching " if args.title_match else ""
+        print(f"GeM bidplus: {total} ongoing bids match {args.query!r} ({page} pages read); ", end="")
+        print(f"showing {len(bids)} {scope}bids\n")
         for n, bid in enumerate(bids, 1):
             print(f"{n:2}. {bid.bid_number}  closes {bid.end_date}")
             print(f"    title : {bid.title}")
