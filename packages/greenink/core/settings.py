@@ -19,8 +19,8 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     config_dir: Path = _REPO_ROOT / "config"
 
-    database_url: str = "postgresql+psycopg://greenink:greenink@localhost:5432/greenink"
-    redis_url: str = "redis://localhost:6379/0"
+    database_url: str = "postgresql+psycopg://greenink:greenink@localhost:5433/greenink"
+    redis_url: str = "redis://localhost:6380/0"
 
     nebius_api_key: SecretStr | None = None
     tavily_api_key: SecretStr | None = None

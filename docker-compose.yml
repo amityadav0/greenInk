@@ -1,0 +1,117 @@
+# Local stack: `docker compose up` (or `make dev`). Keys come from .env (see .env.example).
+# Production uses the same image with Neon, Upstash and R2 instead of these containers.
+name: greenink
+
+# One image for api, worker and migrate. Only `api` builds it; the others reuse the tag.
+x-app: &app
+  image: greenink:local
+  pull_policy: never
+  env_file:
+    - path: .env
+      required: false
+  environment: &app-env
+    ENV: local
+    DATABASE_URL: postgresql+psycopg://greenink:greenink@postgres:5432/greenink
+    REDIS_URL: redis://redis:6379/0
+    # Local MinIO credentials; they override any R2 values in .env.
+    R2_ENDPOINT_URL: http://minio:9000
+    R2_ACCESS_KEY_ID: greenink-local
+    R2_SECRET_ACCESS_KEY: greenink-local-only
+    R2_BUCKET: greenink
+    WEB_ORIGIN: http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_USER: greenink
+      POSTGRES_PASSWORD: greenink
+      POSTGRES_DB: greenink
+    ports: ["5433:5432"]  # 5433 on the host: avoids clashing with a native Postgres
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greenink -d greenink"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    ports: ["6380:6379"]  # 6380 on the host: avoids clashing with a native Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # The minio/minio Docker Hub images are no longer published; Chainguard's build, pinned by digest.
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:268d68a2a3b6fc65f905a61f84d7eab6345ce6bff14f551e2b028ec31e6a1341
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: greenink-local
+      MINIO_ROOT_PASSWORD: greenink-local-only
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+
+  minio-init:
+    image: cgr.dev/chainguard/minio-client@sha256:59f1924e417b6fcfdc0aca321e3bdebe8a56fd0efa7da80037d5eb65a203d687
+    command: ["mb", "--ignore-existing", "local/greenink"]
+    environment:
+      MC_HOST_local: http://greenink-local:greenink-local-only@minio:9000
+    depends_on: [minio]
+    restart: on-failure:20
+
+  migrate:
+    <<: *app
+    command: ["migrate"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    <<: *app
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    pull_policy: build
+    command: ["api"]
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  worker:
+    <<: *app
+    command: ["worker", "--queues", "all"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio-init: {condition: service_completed_successfully}
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: ["sh", "-c", "corepack enable && pnpm install --frozen-lockfile && pnpm dev --hostname 0.0.0.0"]
+    environment:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+      - web_next:/app/.next
+    depends_on:
+      api: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  miniodata:
+  web_node_modules:
+  web_next:
