@@ -59,20 +59,29 @@ def build_worker(queue: QueueName, settings: Settings) -> Worker:
     )
 
 
-async def run(queues: Sequence[QueueName], settings: Settings) -> None:
+async def run(queues: Sequence[QueueName], settings: Settings, stop: asyncio.Event | None = None) -> None:
+    """Run one arq worker per queue until SIGINT/SIGTERM (or `stop` is set).
+
+    Raises if any queue worker exits on its own, e.g. when Redis is unreachable, so the
+    process exits non-zero and the platform restarts it.
+    """
     workers = [build_worker(queue, settings) for queue in queues]
-    stop = asyncio.Event()
+    stop = stop or asyncio.Event()
     loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
+    signals = (signal.SIGINT, signal.SIGTERM)
+    for sig in signals:
         loop.add_signal_handler(sig, stop.set)
 
     log.info("worker_starting", queues=[q.value for q in queues])
     running = [asyncio.create_task(worker.async_run()) for worker in workers]
     stopped = asyncio.create_task(stop.wait())
-    done, _ = await asyncio.wait([*running, stopped], return_when=asyncio.FIRST_COMPLETED)
+    try:
+        done, _ = await asyncio.wait([*running, stopped], return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for sig in signals:
+            loop.remove_signal_handler(sig)
 
     if stopped not in done:
-        # A worker exited on its own (e.g. Redis unreachable): fail loudly so the platform restarts us.
         stopped.cancel()
     log.info("worker_stopping")
     await asyncio.gather(*(worker.close() for worker in workers), return_exceptions=True)

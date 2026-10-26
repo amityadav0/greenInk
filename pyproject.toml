@@ -74,7 +74,15 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-markers = ["db: needs a reachable Postgres at DATABASE_URL (skipped otherwise)"]
+filterwarnings = [
+    "error",
+    # arq calls redis-py's deprecated close() internally on shutdown.
+    "ignore:Call to deprecated close:DeprecationWarning:arq.worker",
+]
+markers = [
+    "db: needs a reachable Postgres at DATABASE_URL (skipped otherwise)",
+    "redis: needs a reachable Redis at REDIS_URL (skipped otherwise)",
+]
 
 [tool.importlinter]
 root_packages = ["greenink", "greenink_api", "greenink_worker"]

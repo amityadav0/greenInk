@@ -24,8 +24,14 @@ jobs:
         ports: ["5433:5432"]
         options: >-
           --health-cmd "pg_isready -U greenink" --health-interval 2s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 3s --health-retries 30
     env:
       DATABASE_URL: postgresql+psycopg://greenink:greenink@localhost:5433/greenink
+      REDIS_URL: redis://localhost:6380/0
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -41,8 +47,8 @@ jobs:
         run: uv run lint-imports
       - name: contracts are fresh
         run: uv run python scripts/export_contracts.py --check
-      - name: pytest
-        run: uv run pytest
+      - name: pytest (DB and Redis tests must run, not skip)
+        run: uv run pytest -ra | tee pytest.log && ! grep -q "SKIPPED" pytest.log
 
   web:
     runs-on: ubuntu-latest

@@ -83,3 +83,33 @@ def test_unknown_route_uses_error_shape(client: TestClient) -> None:
     response = client.get("/v1/nope")
     assert response.status_code == 404
     assert_error_shape(response.json(), "not_found")
+
+
+def test_unhandled_errors_become_500_without_leaking_details() -> None:
+    from greenink.core.settings import Settings
+    from greenink_api.main import create_app
+
+    app = create_app(Settings(database_url="postgresql+psycopg://x:x@127.0.0.1:1/x"))
+
+    @app.get("/boom")
+    async def boom() -> None:
+        raise RuntimeError("database password is hunter2")
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.get("/boom")
+    assert response.status_code == 500
+    assert_error_shape(response.json(), "internal")
+    assert "hunter2" not in response.text
+    assert response.json()["retryable"] is True
+
+
+def test_wrong_method_uses_error_shape(client: TestClient) -> None:
+    response = client.post("/healthz")
+    assert response.status_code == 405
+    assert_error_shape(response.json(), "bad_request")
+
+
+def test_sse_routes_return_501_not_an_empty_stream(client: TestClient) -> None:
+    response = client.get(f"/v1/analyses/{uuid4()}/events")
+    assert response.status_code == 501
+    assert response.headers["content-type"].startswith("application/json")

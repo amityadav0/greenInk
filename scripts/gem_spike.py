@@ -53,8 +53,9 @@ class Bid:
 class PoliteClient:
     """httpx client that waits so requests are at least `MIN_INTERVAL_S` apart."""
 
-    def __init__(self) -> None:
+    def __init__(self, transport: httpx.BaseTransport | None = None) -> None:
         self._client = httpx.Client(
+            transport=transport,
             base_url=BASE_URL,
             headers={"User-Agent": USER_AGENT},
             timeout=httpx.Timeout(30.0, connect=15.0),
