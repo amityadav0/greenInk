@@ -439,6 +439,21 @@ async def find_or_create_analysis(
     return _analysis(row), False
 
 
+async def find_analysis(
+    session: AsyncSession, tender_id: UUID, company_id: UUID, profile_hash: str, requirements_version: str
+) -> Analysis | None:
+    """The analysis stored under this cache key, if any."""
+    row = await session.scalar(
+        select(AnalysisRow).where(
+            AnalysisRow.tender_id == tender_id,
+            AnalysisRow.company_id == company_id,
+            AnalysisRow.profile_hash == profile_hash,
+            AnalysisRow.requirements_version == requirements_version,
+        )
+    )
+    return _analysis(row) if row else None
+
+
 async def get_analysis(session: AsyncSession, analysis_id: UUID) -> Analysis | None:
     row = await session.get(AnalysisRow, analysis_id, populate_existing=True)
     return _analysis(row) if row else None

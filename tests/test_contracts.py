@@ -35,7 +35,9 @@ def test_every_spec_route_is_in_the_contract() -> None:
         (method, re.sub(r"\{[^}]+\}", "{}", path)) for path, ops in paths.items() for method in ops
     }
     assert len(spec_routes) == 17
-    assert spec_routes == contract_routes
+    assert spec_routes <= contract_routes, "every SPEC route is served"
+    # Additions beyond SPEC, each noted in its PR. Anything else is an unplanned contract change.
+    assert contract_routes - spec_routes == {("get", "/v1/tenders/{}/documents/{}/file")}
 
 
 def _spec_enum(label: str) -> set[str]:

@@ -7,6 +7,7 @@ queue in one process and later split them by changing only the start command.
 import argparse
 import asyncio
 import signal
+import threading
 from collections.abc import Sequence
 from typing import cast
 
@@ -94,7 +95,8 @@ async def _run(
 ) -> None:
     workers = [build_worker(queue, settings, services) for queue in queues]
     loop = asyncio.get_running_loop()
-    signals = (signal.SIGINT, signal.SIGTERM)
+    # Signals can only be handled on the main thread; elsewhere (tests, embedding) `stop` is enough.
+    signals = (signal.SIGINT, signal.SIGTERM) if threading.current_thread() is threading.main_thread() else ()
     for sig in signals:
         loop.add_signal_handler(sig, stop.set)
 

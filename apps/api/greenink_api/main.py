@@ -1,6 +1,6 @@
 """FastAPI app: `/v1` routes, health checks, one error shape."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,24 +8,29 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from greenink.core.logging import configure_logging
 from greenink.core.settings import Settings, get_settings
-from greenink.db.session import make_engine
+from greenink_api.deps import AppState, build_state
 from greenink_api.errors import install_error_handlers
 from greenink_api.routes import analyses, companies, health, search, tenders
 
 API_VERSION = "0.1.0"
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    state_factory: Callable[[Settings], Awaitable[AppState]] = build_state,
+) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        services = await state_factory(settings)
         app.state.settings = settings
-        app.state.engine = make_engine(settings.database_url)
+        app.state.services = services
+        app.state.engine = services.engine
         try:
             yield
         finally:
-            await app.state.engine.dispose()
+            await services.aclose()
 
     app = FastAPI(
         title="Green Ink API",

@@ -1,6 +1,5 @@
 """API skeleton: health checks, the error shape, and a 501 for every route not built yet."""
 
-import re
 from uuid import uuid4
 
 import pytest
@@ -8,24 +7,6 @@ from fastapi.testclient import TestClient
 
 from greenink.core.api import ErrorBody
 from greenink_api.routes import health
-
-VALID_BODIES = {
-    "createCompany": {"name": "Brightline Electricals", "profile": {"legal_name": "Brightline Electricals"}},
-    "createCompanyFromUrl": {"url": "https://example.com"},
-    "createAnalysis": {"tender_id": str(uuid4()), "company_id": str(uuid4())},
-}
-QUERIES = {"search": {"q": "current transformer"}}
-
-
-def contract_operations(client: TestClient) -> list[tuple[str, str, str]]:
-    """(method, path, operationId) for every /v1 operation in the app's OpenAPI document."""
-    paths = client.app.openapi()["paths"]  # type: ignore[attr-defined]
-    return [
-        (method, path, op["operationId"])
-        for path, ops in paths.items()
-        if path.startswith("/v1/")
-        for method, op in ops.items()
-    ]
 
 
 def assert_error_shape(body: object, code: str) -> None:
@@ -59,18 +40,17 @@ def test_readyz_503_with_error_shape_when_dependencies_are_down(client: TestClie
     assert "postgres" in response.json()["message"]
 
 
-def test_every_contract_route_returns_501_with_error_shape(client: TestClient) -> None:
-    operations = contract_operations(client)
-    assert len(operations) == 15
-    for method, template, operation_id in operations:
-        path = re.sub(r"\{page_no\}", "1", template)
-        path = re.sub(r"\{[a-z_]+\}", str(uuid4()), path)
-        response = client.request(
-            method, path, params=QUERIES.get(operation_id), json=VALID_BODIES.get(operation_id)
-        )
-        assert response.status_code == 501, (method, template, response.text)
-        assert_error_shape(response.json(), "not_implemented")
-        assert response.json()["retryable"] is False
+def test_unbuilt_export_returns_501_with_error_shape(client: TestClient) -> None:
+    response = client.get(f"/v1/analyses/{uuid4()}/export.pdf")
+    assert response.status_code == 501
+    assert_error_shape(response.json(), "not_implemented")
+    assert response.json()["retryable"] is False
+
+
+def test_routes_fail_cleanly_when_the_database_is_down(client: TestClient) -> None:
+    response = client.get(f"/v1/tenders/{uuid4()}")
+    assert response.status_code == 500
+    assert_error_shape(response.json(), "internal")
 
 
 def test_validation_errors_use_error_shape(client: TestClient) -> None:
@@ -107,9 +87,3 @@ def test_wrong_method_uses_error_shape(client: TestClient) -> None:
     response = client.post("/healthz")
     assert response.status_code == 405
     assert_error_shape(response.json(), "bad_request")
-
-
-def test_sse_routes_return_501_not_an_empty_stream(client: TestClient) -> None:
-    response = client.get(f"/v1/analyses/{uuid4()}/events")
-    assert response.status_code == 501
-    assert response.headers["content-type"].startswith("application/json")

@@ -166,12 +166,13 @@ def migrate(database_url: str) -> None:
             os.environ["DATABASE_URL"] = previous
 
 
-async def make_services(database_url: str, redis_url: str, llm: FakeLLM | None = None) -> Services:
+async def make_services(
+    database_url: str, redis_url: str, llm: FakeLLM | None = None, blobs: MemoryBlobStore | None = None
+) -> Services:
     llm = llm or fake_llm()
     engine = make_engine(database_url)
     sessions = make_sessionmaker(engine)
     redis = await create_pool(RedisSettings.from_dsn(redis_url))
-    await redis.flushdb()
     settings = Settings(database_url=database_url, redis_url=redis_url)
     return Services(
         settings=settings,
@@ -180,7 +181,7 @@ async def make_services(database_url: str, redis_url: str, llm: FakeLLM | None =
         redis=redis,
         queue=ArqJobQueue(redis),
         events=RedisEventBus(sessions, redis),
-        blobs=MemoryBlobStore(),
+        blobs=blobs or MemoryBlobStore(),
         gem=FakeGem(),
         parser=PyMuPDFParser(llm),
         extractor=LLMExtractor(llm),

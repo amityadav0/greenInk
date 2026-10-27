@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenders/{tender_id}/documents/{document_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The document's bytes, served same-origin for the PDF viewer */
+        get: operations["getTenderDocumentFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenders/{tender_id}/pages/{page_no}": {
         parameters: {
             query?: never;
@@ -252,7 +269,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** The drafted fix: 200 when cached, else 202 while it is drafted */
+        /** The drafted fix: 200 when ready, else 202 while it is drafted */
         post: operations["draftFix"];
         delete?: never;
         options?: never;
@@ -1138,15 +1155,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     searchEvents: {
@@ -1169,26 +1177,8 @@ export interface operations {
                     "text/event-stream": unknown;
                 };
             };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ErrorBody"];
-                };
-            };
             /** @description Validation error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1262,15 +1252,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     getTender: {
@@ -1311,8 +1292,41 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
+        };
+    };
+    getTenderDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tender_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored document, for the PDF viewer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation error */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1364,15 +1378,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     listCompanies: {
@@ -1391,15 +1396,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Company"][];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -1437,15 +1433,6 @@ export interface operations {
             };
             /** @description Rate limited or budget exceeded */
             429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1495,15 +1482,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     uploadCompanyDocument: {
@@ -1536,6 +1514,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Not found */
@@ -1576,15 +1563,6 @@ export interface operations {
             };
             /** @description Rate limited or budget exceeded */
             429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1643,15 +1621,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     getAnalysis: {
@@ -1685,15 +1654,6 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1743,15 +1703,6 @@ export interface operations {
                     "text/event-stream": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     getAnalysisTrace: {
@@ -1792,15 +1743,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not implemented yet */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
         };
     };
     draftFix: {
@@ -1824,7 +1766,7 @@ export interface operations {
                     "application/json": components["schemas"]["Fix"];
                 };
             };
-            /** @description Drafting; the fix arrives on the events stream */
+            /** @description Drafting; poll this endpoint until it returns 200 */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -1853,15 +1795,6 @@ export interface operations {
             };
             /** @description Rate limited or budget exceeded */
             429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Not implemented yet */
-            501: {
                 headers: {
                     [name: string]: unknown;
                 };

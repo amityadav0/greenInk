@@ -1,15 +1,28 @@
-"""Load the fictional demo company, Brightline Electricals, and its document vault.
+"""Load the fictional demo company, Brightline Electricals (idempotent).
 
-The vault holds three deliberate traps: a certificate worded "Trading Business", no BIS
-licence, and turnover just under a common threshold. Fictional data only (AGENTS rule 6).
+    make seed
+
+Its profile (seed/brightline/profile.json) carries the three traps: papers worded "Trading
+Business", no BIS licence, and turnover just under a common threshold. Fictional data only.
 """
 
+import asyncio
 import sys
 
+from greenink.core.settings import get_settings
+from greenink.db.seed import seed_demo
+from greenink.db.session import make_engine, make_sessionmaker
 
-def main() -> int:
-    raise NotImplementedError("TODO(lane-C): load seed/brightline into companies + company_documents")
+
+async def main() -> int:
+    engine = make_engine(get_settings().database_url)
+    try:
+        company = await seed_demo(make_sessionmaker(engine))
+    finally:
+        await engine.dispose()
+    print(f"Seeded demo company {company.name} ({company.id})")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(asyncio.run(main()))

@@ -94,12 +94,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/search/{search_id}/events:
     get:
       tags:
@@ -136,20 +130,8 @@ paths:
                     minimum: 0
                 required:
                 - data
-        '404':
-          description: Not found
-          content:
-            text/event-stream:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
         '422':
           description: Validation error
-          content:
-            text/event-stream:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
           content:
             text/event-stream:
               schema:
@@ -204,12 +186,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/tenders/{tender_id}:
     get:
       tags:
@@ -243,8 +219,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
+  /v1/tenders/{tender_id}/documents/{document_id}/file:
+    get:
+      tags:
+      - tenders
+      summary: The document's bytes, served same-origin for the PDF viewer
+      operationId: getTenderDocumentFile
+      parameters:
+      - name: tender_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Tender Id
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Document Id
+      responses:
+        '200':
+          description: The stored document, for the PDF viewer
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation error
           content:
             application/json:
               schema:
@@ -300,12 +315,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/companies:
     get:
       tags:
@@ -322,12 +331,6 @@ paths:
                   $ref: '#/components/schemas/Company'
                 type: array
                 title: Response Listcompanies
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
     post:
       tags:
       - companies
@@ -354,12 +357,6 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
         '429':
           description: Rate limited or budget exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
           content:
             application/json:
               schema:
@@ -395,12 +392,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/companies/{company_id}/documents:
     post:
       tags:
@@ -422,6 +413,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Accepted'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
         '404':
           description: Not found
           content:
@@ -448,12 +445,6 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
         '429':
           description: Rate limited or budget exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
           content:
             application/json:
               schema:
@@ -523,12 +514,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/analyses/{analysis_id}:
     get:
       tags:
@@ -558,12 +543,6 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
         '422':
           description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
           content:
             application/json:
               schema:
@@ -624,12 +603,6 @@ paths:
             text/event-stream:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            text/event-stream:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/analyses/{analysis_id}/trace:
     get:
       tags:
@@ -663,17 +636,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
   /v1/analyses/{analysis_id}/findings/{finding_id}/fix:
     post:
       tags:
       - analyses
-      summary: 'The drafted fix: 200 when cached, else 202 while it is drafted'
+      summary: 'The drafted fix: 200 when ready, else 202 while it is drafted'
       operationId: draftFix
       parameters:
       - name: analysis_id
@@ -698,7 +665,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Fix'
         '202':
-          description: Drafting; the fix arrives on the events stream
+          description: Drafting; poll this endpoint until it returns 200
           content:
             application/json:
               schema:
@@ -717,12 +684,6 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
         '429':
           description: Rate limited or budget exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '501':
-          description: Not implemented yet
           content:
             application/json:
               schema:
