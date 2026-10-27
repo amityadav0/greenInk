@@ -6,7 +6,7 @@ endpoints and timings, not impressions.
 ## Nebius Token Factory
 
 - **What we used it for:**
-- **What worked:**
+- **What worked:** Oct 27, 2026: `GET /v1/models` listed 30 models (5 Nemotron) and all four configured Nemotron models answered a 5-token chat call on the first try through the OpenAI SDK (`scripts/check_models.py`). One key covered all four models.
 - **What broke (exact error and endpoint):**
 - **Time from zero to first call:**
 - **Would we build with it again, and why:**
