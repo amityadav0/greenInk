@@ -4,7 +4,7 @@ import pytest
 
 from greenink.core.enums import Stage
 from greenink.core.settings import Settings
-from greenink.jobs.queue import STAGE_QUEUE, QueueName
+from greenink.jobs.queue import JOB_QUEUE, STAGE_QUEUE, JobName, QueueName
 from greenink_worker.__main__ import build_worker, parse_queues
 from greenink_worker.stages import HANDLERS
 
@@ -23,15 +23,16 @@ def test_unknown_queue_is_rejected() -> None:
         parse_queues("render")
 
 
-def test_every_queue_has_a_handler_and_every_stage_a_queue() -> None:
-    assert set(HANDLERS) == set(QueueName)
+def test_every_job_has_a_handler_and_every_queue_has_work() -> None:
+    assert set(HANDLERS) == set(JobName)
+    assert {JOB_QUEUE[job] for job in JobName} == set(QueueName)
     assert set(STAGE_QUEUE) == set(Stage)
 
 
 async def _build() -> None:
     worker = build_worker(QueueName.JUDGE, Settings())
     assert worker.queue_name == "q.judge"
-    assert list(worker.functions) == ["judge"]
+    assert sorted(worker.functions) == ["fix", "judge"]
 
 
 def test_build_worker() -> None:

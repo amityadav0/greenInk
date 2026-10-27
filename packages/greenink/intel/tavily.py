@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
+from pydantic import SecretStr
 from tavily import AsyncTavilyClient
 
 from greenink.core.enums import ErrorCode
@@ -62,8 +63,8 @@ def item_name(title: str) -> str:
 
 
 class TavilyIntelProvider:
-    def __init__(self, client: AsyncTavilyClient) -> None:
-        self._client = client
+    def __init__(self, api_key: SecretStr) -> None:
+        self._client = AsyncTavilyClient(api_key=api_key.get_secret_value())
 
     async def _search(self, query: str) -> list[dict[str, Any]]:
         try:

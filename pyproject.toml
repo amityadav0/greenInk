@@ -154,6 +154,7 @@ source_modules = [
     "greenink_api", "greenink_worker",
 ]
 forbidden_modules = ["openai", "httpx2"]
+allow_indirect_imports = true  # the rule is about importing the SDK; using greenink.llm is the point
 
 [[tool.importlinter.contracts]]
 name = "Only intel and companies call Tavily (AGENTS rule 3)"
@@ -164,3 +165,4 @@ source_modules = [
     "greenink_api", "greenink_worker",
 ]
 forbidden_modules = ["tavily"]
+allow_indirect_imports = true

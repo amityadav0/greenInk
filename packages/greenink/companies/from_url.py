@@ -1,5 +1,6 @@
 """Draft company profile from a website: Tavily Extract, then the `profile_url` task."""
 
+from pydantic import SecretStr
 from tavily import AsyncTavilyClient
 
 from greenink.core.enums import ErrorCode, LLMTask
@@ -19,9 +20,9 @@ Return JSON matching the CompanyProfile schema."""
 
 
 class TavilyProfileBuilder:
-    def __init__(self, llm: LLM, tavily: AsyncTavilyClient) -> None:
+    def __init__(self, llm: LLM, api_key: SecretStr) -> None:
         self._llm = llm
-        self._tavily = tavily
+        self._tavily = AsyncTavilyClient(api_key=api_key.get_secret_value())
 
     async def from_url(self, url: str) -> CompanyProfile:
         try:
