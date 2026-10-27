@@ -80,3 +80,11 @@ def test_sha256_and_fiscal_year_patterns() -> None:
 def test_company_create_needs_a_name() -> None:
     with pytest.raises(ValidationError):
         CompanyCreate.model_validate({"name": "", "profile": {"legal_name": "X"}})
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d", "postgresql+psycopg://u:p@h:5432/d"],
+)
+def test_hosted_postgres_urls_get_the_psycopg_driver(url: str) -> None:
+    assert Settings(database_url=url).database_url == "postgresql+psycopg://u:p@h:5432/d"

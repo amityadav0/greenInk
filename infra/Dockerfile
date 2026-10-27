@@ -1,6 +1,6 @@
 # One image for every Python role; the command picks api, worker or migrate.
 #   docker build -f infra/Dockerfile -t greenink .
-#   docker run greenink api | worker --queues all | migrate
+#   docker run greenink [api | worker --queues all | migrate]   (or set ROLE)
 
 FROM ghcr.io/astral-sh/uv:0.13.5 AS uv
 
@@ -34,4 +34,4 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 CONFIG_DIR=/app/config ENV=pr
 USER greenink
 EXPOSE 8000
 ENTRYPOINT ["entrypoint"]
-CMD ["api"]
+# No CMD: the role comes from the first argument or $ROLE (api by default).

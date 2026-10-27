@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import boto3
+import structlog
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from pydantic import SecretStr
@@ -11,10 +12,17 @@ from pydantic import SecretStr
 from greenink.core.enums import ErrorCode
 from greenink.core.errors import GreenInkError
 
+log = structlog.get_logger()
+
 
 class S3BlobStore:
     def __init__(
-        self, endpoint_url: str, bucket: str, access_key_id: SecretStr, secret_access_key: SecretStr
+        self,
+        endpoint_url: str,
+        bucket: str,
+        access_key_id: SecretStr,
+        secret_access_key: SecretStr,
+        addressing_style: str = "path",
     ) -> None:
         self._bucket = bucket
         self._client: Any = boto3.client(
@@ -23,15 +31,28 @@ class S3BlobStore:
             aws_access_key_id=access_key_id.get_secret_value(),
             aws_secret_access_key=secret_access_key.get_secret_value(),
             region_name="auto",
-            config=Config(signature_version="s3v4", retries={"max_attempts": 3, "mode": "standard"}),
+            config=Config(
+                signature_version="s3v4",
+                retries={"max_attempts": 3, "mode": "standard"},
+                s3={"addressing_style": addressing_style},
+            ),
         )
 
     async def ensure_bucket(self) -> None:
+        """Create the bucket locally (MinIO). Hosted buckets are created in their console, and
+        the credentials may not allow creating or even listing buckets, so failures only log."""
+
         def create() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
-            except ClientError:
-                self._client.create_bucket(Bucket=self._bucket)
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") not in ("404", "NoSuchBucket"):
+                    log.warning("bucket_check_failed", bucket=self._bucket, error=str(exc))
+                    return
+                try:
+                    self._client.create_bucket(Bucket=self._bucket)
+                except ClientError as create_exc:
+                    log.warning("bucket_create_failed", bucket=self._bucket, error=str(create_exc))
 
         await asyncio.to_thread(create)
 

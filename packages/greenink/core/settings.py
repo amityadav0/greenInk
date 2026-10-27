@@ -7,7 +7,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -29,9 +29,20 @@ class Settings(BaseModel):
     r2_access_key_id: SecretStr | None = None
     r2_secret_access_key: SecretStr | None = None
     r2_bucket: str = "greenink"
+    r2_addressing_style: str = "path"
+    """`path` for MinIO; `virtual` for Railway buckets and most hosted S3."""
 
     session_secret: SecretStr | None = None
     web_origin: str = "http://localhost:3000"
+
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_driver(cls, value: str) -> str:
+        """Hosted Postgres (Railway, Neon) hands out postgres:// URLs; SQLAlchemy needs the driver."""
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value.removeprefix(prefix)
+        return value
 
     @classmethod
     def from_env(cls) -> "Settings":

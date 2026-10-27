@@ -76,6 +76,7 @@ def blob_store(settings: Settings) -> S3BlobStore:
         settings.r2_bucket,
         settings.r2_access_key_id or SecretStr(""),
         settings.r2_secret_access_key or SecretStr(""),
+        settings.r2_addressing_style,
     )
 
 

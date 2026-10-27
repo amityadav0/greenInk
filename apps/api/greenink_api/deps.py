@@ -71,6 +71,7 @@ async def build_state(settings: Settings) -> AppState:
             settings.r2_bucket,
             settings.r2_access_key_id or SecretStr(""),
             settings.r2_secret_access_key or SecretStr(""),
+            settings.r2_addressing_style,
         ),
         gem=GemBidplusAdapter(gem, RateLimiter(gem.rate_limit_rps, redis)),
         sources=sources,
