@@ -69,8 +69,14 @@ explicit_package_bases = true
 files = ["packages/greenink", "apps/api/greenink_api", "apps/worker/greenink_worker", "scripts", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["arq.*", "tavily.*", "fitz.*", "pymupdf.*"]
+module = ["arq.*", "tavily.*", "fitz.*", "pymupdf.*", "openpyxl.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# PyMuPDF's bindings are only partly typed; the parser is the one module that calls them.
+module = ["greenink.docs.parse"]
+disallow_untyped_calls = false
+warn_return_any = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -79,6 +85,8 @@ filterwarnings = [
     "error",
     # arq calls redis-py's deprecated close() internally on shutdown.
     "ignore:Call to deprecated close:DeprecationWarning:arq.worker",
+    # PyMuPDF's SWIG bindings warn while loading; as an error inside native init it segfaults.
+    "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",
 ]
 markers = [
     "db: needs a reachable Postgres at DATABASE_URL (skipped otherwise)",

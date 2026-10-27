@@ -12,7 +12,9 @@ class Extractor(Protocol):
     version: str
     """Part of the extraction cache key `(document.sha256, extractor_version)`."""
 
-    async def extract(self, document_id: UUID, pages: Pages) -> list[Requirement]: ...
+    async def extract(
+        self, document_id: UUID, pages: Pages, *, analysis_id: UUID | None = None
+    ) -> list[Requirement]: ...
 
 
 class Verifier(Protocol):
@@ -34,4 +36,6 @@ class Judge(Protocol):
 
 
 class Fixer(Protocol):
-    async def draft(self, finding: Finding, profile: CompanyProfile) -> Fix: ...
+    async def draft(
+        self, finding: Finding, profile: CompanyProfile, *, analysis_id: UUID | None = None
+    ) -> Fix: ...
