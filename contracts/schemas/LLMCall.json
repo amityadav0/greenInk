@@ -20,7 +20,8 @@
         "extract",
         "page_vision",
         "judge",
-        "fix"
+        "fix",
+        "price_intel"
       ],
       "title": "LLMTask",
       "type": "string"

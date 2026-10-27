@@ -108,7 +108,7 @@ async def build(settings: Settings) -> Services:
         judge=LLMJudge(llm),
         fixer=LLMFixer(llm),
         triage=LLMTriage(llm),
-        intel=TavilyIntelProvider(tavily) if tavily else None,
+        intel=TavilyIntelProvider(tavily, llm) if tavily else None,
         website=TavilyProfileBuilder(llm, tavily) if tavily else None,
         documents=DocumentProfileBuilder(llm),
         closers=[gem.aclose],

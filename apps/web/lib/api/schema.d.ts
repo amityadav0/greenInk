@@ -706,7 +706,7 @@ export interface components {
          * @description Gateway tasks; each maps to a model in `config/models.yaml`.
          * @enum {string}
          */
-        LLMTask: "triage" | "profile_url" | "extract" | "page_vision" | "judge" | "fix";
+        LLMTask: "triage" | "profile_url" | "extract" | "page_vision" | "judge" | "fix" | "price_intel";
         /**
          * MSECategory
          * @enum {string}

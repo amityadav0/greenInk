@@ -28,6 +28,7 @@ COPY --from=build /app/.venv .venv
 COPY --from=build /app/packages packages
 COPY --from=build /app/apps apps
 COPY config config
+COPY seed seed
 COPY infra/entrypoint.sh /usr/local/bin/entrypoint
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 CONFIG_DIR=/app/config ENV=production
 USER greenink

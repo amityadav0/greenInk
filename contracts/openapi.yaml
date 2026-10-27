@@ -1413,6 +1413,7 @@ components:
       - page_vision
       - judge
       - fix
+      - price_intel
       title: LLMTask
       description: Gateway tasks; each maps to a model in `config/models.yaml`.
     MSECategory:

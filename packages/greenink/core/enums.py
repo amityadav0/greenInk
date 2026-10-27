@@ -170,6 +170,7 @@ class LLMTask(StrEnum):
     PAGE_VISION = "page_vision"
     JUDGE = "judge"
     FIX = "fix"
+    PRICE_INTEL = "price_intel"
 
 
 class LLMCallStatus(StrEnum):

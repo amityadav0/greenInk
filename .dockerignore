@@ -13,6 +13,5 @@ apps/web
 node_modules
 eval
 docs
-seed
 tests
 .DS_Store
