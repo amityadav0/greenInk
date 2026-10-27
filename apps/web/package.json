@@ -9,7 +9,9 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
-    "gen:api": "openapi-typescript ../../contracts/openapi.yaml --output lib/api/schema.d.ts"
+    "gen:api": "openapi-typescript ../../contracts/openapi.yaml --output lib/api/schema.d.ts",
+    "predev": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "next": "^15.5.28",

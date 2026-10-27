@@ -2,6 +2,36 @@
 
 @theme {
   --color-ink: #0f6b3a;
+  --color-ink-dark: #0a4f2b;
   --color-ink-light: #e7f4ec;
   --color-block: #b42318;
+  --color-block-light: #fdecea;
+  --color-amber: #b45309;
+  --color-amber-light: #fef3c7;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #fafaf9;
+}
+
+/* Highlighted quote in the PDF text layer. */
+.textLayer mark.quote {
+  background: rgb(250 204 21 / 0.55);
+  color: transparent;
+  border-radius: 2px;
+}
+
+@media print {
+  header,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
 }

@@ -102,7 +102,7 @@ services:
     environment:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
       npm_config_store_dir: /pnpm-store  # keep the package store out of the mounted source
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_URL: http://api:8000  # the web app proxies /v1 to the API, same-origin for the browser
     ports: ["3000:3000"]
     volumes:
       - ./apps/web:/app

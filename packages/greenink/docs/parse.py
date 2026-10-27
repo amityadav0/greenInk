@@ -4,6 +4,7 @@ openpyxl for BoQ spreadsheets (one page per sheet), vision for images."""
 import asyncio
 import io
 import zipfile
+from uuid import UUID
 
 import pymupdf
 import structlog
@@ -30,12 +31,12 @@ class PyMuPDFParser:
         self._llm = llm
         self._max_vision_pages = max_vision_pages
 
-    async def parse(self, data: bytes) -> Pages:
+    async def parse(self, data: bytes, *, analysis_id: UUID | None = None) -> Pages:
         kind = sniff(data)
         if kind == "xlsx":
             return await asyncio.to_thread(_xlsx_pages, data)
         if kind in ("png", "jpeg"):
-            return [await self._vision(1, data if kind == "png" else _to_png(data))]
+            return [await self._vision(1, data if kind == "png" else _to_png(data), analysis_id)]
         if kind != "pdf":
             raise GreenInkError(
                 ErrorCode.UNSUPPORTED_MEDIA_TYPE, "Only PDF, XLSX, PNG and JPEG documents can be read."
@@ -47,13 +48,13 @@ class PyMuPDFParser:
             for n, text in texts.items()
             if n not in scanned
         }
-        vision = await asyncio.gather(*(self._vision(n, png) for n, png in scanned.items()))
+        vision = await asyncio.gather(*(self._vision(n, png, analysis_id) for n, png in scanned.items()))
         pages.update({page.page_no: page for page in vision})
         return [pages[n] for n in sorted(pages)]
 
-    async def _vision(self, page_no: int, png: bytes) -> ParsedPage:
+    async def _vision(self, page_no: int, png: bytes, analysis_id: UUID | None) -> ParsedPage:
         try:
-            return await read_page(self._llm, page_no, png)
+            return await read_page(self._llm, page_no, png, analysis_id)
         except GreenInkError as exc:
             if exc.code == ErrorCode.BUDGET_EXCEEDED:
                 raise

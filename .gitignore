@@ -34,3 +34,4 @@ eval/*.png
 .DS_Store
 .idea/
 .vscode/
+public/pdf.worker.min.mjs

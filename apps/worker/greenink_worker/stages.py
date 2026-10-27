@@ -194,7 +194,9 @@ async def _parse(services: Services, key: str, payload: dict[str, Any]) -> None:
             await services.events.publish(
                 analysis_id, Stage.PARSE, StageState.RUNNING, f"Reading {stored.document.filename}…"
             )
-        pages = await services.parser.parse(await services.blobs.get(stored.blob_key))
+        pages = await services.parser.parse(
+            await services.blobs.get(stored.blob_key), analysis_id=analysis_id
+        )
         async with services.sessions.begin() as session:
             await repos.save_pages(
                 session,
@@ -241,6 +243,12 @@ async def _extract(services: Services, key: str, payload: dict[str, Any]) -> Non
         async with services.sessions.begin() as session:
             await repos.save_requirements(session, stored.document.id, version, checked)
         if analysis_id:
+            await services.events.publish(
+                analysis_id,
+                Stage.EXTRACT,
+                StageState.DONE,
+                f"{len(checked)} requirements found in {stored.document.filename}.",
+            )
             await services.events.publish(
                 analysis_id,
                 Stage.VERIFY,

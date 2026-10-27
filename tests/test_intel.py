@@ -16,7 +16,7 @@ from tests.fakes import FakeLLM
 def test_band_drops_lot_prices_and_tender_values() -> None:
     # Unit prices around 20k, one lot price and one whole-tender value.
     assert band([18_000, 21_000, 19_500, 23_000, 1_355_000, 19_300_000]) == (18_375.0, 22_500.0)
-    assert band([42_000]) == (42_000, 42_000)
+    assert band([42_000]) == (None, None), "one price is not a band"
     assert band([19_000, 115_000]) == (19_000, 115_000), "two prices: both kept"
     assert band([]) == (None, None)
     assert band([3.0]) == (None, None), "below the plausible range"
@@ -24,6 +24,10 @@ def test_band_drops_lot_prices_and_tender_values() -> None:
 
 def test_item_name() -> None:
     assert item_name("11kV CT 1200/5 (BoQ for substations)") == "11kV CT 1200/5"
+    assert (
+        item_name("RU7403294548 CURRENT TRANSFORMER BPCL MUMBAI PROJECT,RU7403296036 CURRENT TRANSFORMER")
+        == "CURRENT TRANSFORMER BPCL MUMBAI PROJECT"
+    )
 
 
 class FakeTavily:
@@ -61,7 +65,7 @@ def test_prices_cites_every_source_and_uses_lightning_unit_prices() -> None:
     ]
     assert [str(s.url) for s in intel.sources] == [r["url"] for r in results], "duplicates removed, all cited"
     assert [s.price_inr for s in intel.sources] == [21000, None, None]
-    assert (intel.band_low, intel.band_high) == (21000, 21000)
+    assert (intel.band_low, intel.band_high) == (None, None), "a single unit price is shown, not banded"
     [(task, _, sent_analysis)] = llm.calls
     assert task == LLMTask.PRICE_INTEL
     assert sent_analysis == analysis_id

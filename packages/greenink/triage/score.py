@@ -19,10 +19,13 @@ summary fields only (title, buyer, quantity, closing date). This is a quick firs
 a full document review happens later.
 
 For every bid, give a badge:
-- "green": the company makes this product or a very close one, and nothing in the summary
-  suggests it cannot qualify.
-- "amber": related products, or the quantity, buyer type or timeline looks demanding for a
-  company of this size.
+- "green": the bid is for a product on the company's product list (the same kind of product,
+  for example an 11 kV current transformer for a company that makes 11 kV CTs), and nothing
+  in the summary suggests it cannot qualify.
+- "amber": a close variant the company does not list (another voltage class, a related
+  instrument transformer), or the quantity, buyer type or timeline looks demanding.
+  Equipment that merely works with the company's products (test kits, meters, panels) is
+  amber at best, never green.
 - "red": not what the company makes, or clearly out of reach.
 
 "reason": at most 15 words, naming the deciding fact, for example "Makes 11 kV CTs; 6 units

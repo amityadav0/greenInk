@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Protocol
+from uuid import UUID
 
 from greenink.core.enums import PageMethod
 
@@ -25,4 +26,6 @@ def render_pages(pages: Pages) -> str:
 
 
 class Parser(Protocol):
-    async def parse(self, data: bytes) -> Pages: ...
+    async def parse(self, data: bytes, *, analysis_id: UUID | None = None) -> Pages:
+        """`analysis_id` attributes any vision calls to that report's Model Trace."""
+        ...

@@ -262,3 +262,15 @@ def test_new_reports_are_rate_limited_per_ip(env: tuple[TestClient, MemoryBlobSt
         )
     assert statuses[:10] == [202] * 10
     assert statuses[10] == 429
+
+
+def test_finished_report_replays_every_stage(env: tuple[TestClient, MemoryBlobStore]) -> None:
+    client, _ = env
+    bid = client.get("/v1/search", params={"q": "current transformer"}).json()["results"][0]
+    accepted = client.post(
+        "/v1/analyses", json={"tender_id": bid["tender_id"], "company_id": str(DEMO_COMPANY_ID)}
+    ).json()
+    live = [e for name, e in sse(client, accepted["events_url"]) if name == "stage"]
+    replay = [e for name, e in sse(client, accepted["events_url"]) if name == "stage"]
+    assert replay == live, "reopening a finished report replays the whole history"
+    assert {"verdict", "intel", "extract"} <= {e["stage"] for e in replay}

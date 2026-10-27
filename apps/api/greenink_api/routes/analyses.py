@@ -25,7 +25,7 @@ from greenink.core.errors import GreenInkError
 from greenink.core.models import CompanyProfile, Finding, Fix, JobEvent
 from greenink.db import repos
 from greenink.jobs.queue import JobName
-from greenink_api.deps import ANALYSIS_LIMIT, FIX_LIMIT, AppState, check_limit, session_id, state
+from greenink_api.deps import ANALYSIS_LIMIT, FIX_LIMIT, check_limit, session_id, state
 from greenink_api.errors import error_responses
 
 router = APIRouter(prefix="/v1/analyses", tags=["analyses"])
@@ -156,30 +156,28 @@ async def analysis_events(
     if analysis is None:
         raise GreenInkError(ErrorCode.NOT_FOUND, "That report was not found.")
     after = int(last_event_id) if last_event_id and last_event_id.isdigit() else 0
-    seen: dict[Stage, StageState] = {e.stage: e.state for event_id, e in history if event_id <= after}
+    seen: dict[Stage, StageState] = {event.stage: event.state for _, event in history}
 
-    stream = app.events.subscribe(analysis_id, after)
-    try:
-        async with asyncio.timeout(STREAM_TIMEOUT_S):
-            async for event_id, event in stream:
-                seen[event.stage] = event.state
+    if analysis.status in FINISHED and _complete(seen):
+        # Nothing more will happen: replay what the client has not seen, then end.
+        for event_id, event in history:
+            if event_id > after:
                 yield ServerSentEvent(data=event, id=str(event_id), event="stage")  # type: ignore[misc]
-                if _complete(seen) or (
-                    analysis.status in FINISHED and not await _more_coming(app, analysis_id)
-                ):
-                    break
-    except TimeoutError:
-        pass
-    finally:
-        await stream.aclose()  # type: ignore[attr-defined]
+    else:
+        live: dict[Stage, StageState] = {e.stage: e.state for i, e in history if i <= after}
+        stream = app.events.subscribe(analysis_id, after)
+        try:
+            async with asyncio.timeout(STREAM_TIMEOUT_S):
+                async for event_id, event in stream:
+                    live[event.stage] = event.state
+                    yield ServerSentEvent(data=event, id=str(event_id), event="stage")  # type: ignore[misc]
+                    if _complete(live):
+                        break
+        except TimeoutError:
+            pass
+        finally:
+            await stream.aclose()  # type: ignore[attr-defined]
     yield ServerSentEvent(data={"analysis_id": str(analysis_id)}, event="done")  # type: ignore[misc]
-
-
-async def _more_coming(app: AppState, analysis_id: UUID) -> bool:
-    """A finished analysis may still be waiting for its price intel."""
-    async with app.sessions() as db:
-        events = await repos.events_after(db, analysis_id)
-    return not any(e.stage == Stage.INTEL and e.state in TERMINAL for _, e in events)
 
 
 @router.get(
