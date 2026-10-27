@@ -9,3 +9,7 @@ Its documents go here, generated for the demo, with three deliberate traps:
 
 Fictional data only: no real company names, people, GST/PAN numbers or prices (AGENTS rule 6).
 Loaded by `make seed` (lane C).
+
+`profile.json` is the company profile the demo judges against (`greenink.core.models.CompanyProfile`).
+Its traps: `business_nature_wording` is "Trading Business", there is no BIS certification, and
+average turnover is about 46.7 lakh, just under a common 50 lakh threshold.

@@ -1,5 +1,6 @@
 """Ports of the `analysis` module: extract, verify, judge, fix."""
 
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID
@@ -30,6 +31,8 @@ class Judge(Protocol):
         requirements: list[Requirement],
         profile: CompanyProfile,
         closes_at: datetime | None,
+        *,
+        bid_facts: Mapping[str, str] | None = None,
     ) -> list[Finding]:
         """Judge verified requirements only; never decides the verdict."""
         ...

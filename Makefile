@@ -6,7 +6,7 @@ UV_RUN := uv run $(if $(wildcard .env),--env-file .env,)
 WEB := pnpm --dir apps/web
 ALEMBIC := uv run alembic -c packages/greenink/db/alembic.ini
 
-.PHONY: help install dev down test lint fmt openapi migrate seed check-models gem-spike eval
+.PHONY: help install dev down test lint fmt openapi migrate seed check-models gem-spike run-one eval
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -51,6 +51,9 @@ check-models: ## Ping every model in config/models.yaml on Token Factory (needs 
 
 gem-spike: ## Search GeM and download 10 bid PDFs to data/raw (Q="current transformer")
 	uv run python scripts/gem_spike.py "$(or $(Q),current transformer)"
+
+run-one: ## Cited report for one bid: make run-one BID=GEM-2026-B-8175711 [ARGS="--fixes 2"]
+	$(UV_RUN) python scripts/run_one.py "$(BID)" $(ARGS)
 
 eval: ## Run the evaluation set (writes eval/results.csv)
 	$(UV_RUN) python eval/run.py

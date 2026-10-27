@@ -2,11 +2,10 @@
 
 import asyncio
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from greenink.analysis.verify import normalise
 from greenink.core.enums import LLMTask
-from greenink.core.ids import new_id
 from greenink.core.models import ExtractionResult, Requirement
 from greenink.docs.port import Pages
 from greenink.llm.port import LLM, LLMInput
@@ -73,7 +72,9 @@ class LLMExtractor:
                 seen.add(key)
                 requirements.append(
                     Requirement(
-                        id=new_id(),
+                        # Deterministic: re-extracting a document yields the same ids, so judging
+                        # inputs (and their prompt-cache keys) stay stable.
+                        id=uuid5(document_id, f"{self.version}|{key[0]}|{key[1]}|{key[2]}"),
                         document_id=document_id,
                         extractor_version=self.version,
                         category=item.category,

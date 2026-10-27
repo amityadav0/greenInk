@@ -6,6 +6,7 @@ one, it is reported as `unclear` rather than silently dropped.
 
 import asyncio
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -22,14 +23,21 @@ from greenink.core.models import (
 )
 from greenink.llm.port import LLM, LLMInput
 
-BATCH_SIZE = 25
+BATCH_SIZE = 10
+"""Small batches judged in parallel: wall time is the slowest batch, not one long call."""
 
 
-def bid_context(closes_at: datetime | None, now: datetime | None = None) -> str:
+def bid_context(
+    closes_at: datetime | None, facts: Mapping[str, str] | None = None, now: datetime | None = None
+) -> str:
+    """Whole days only, so the judge's input (and its cache key) is stable within a day."""
+    lines = [f"{name}: {value}" for name, value in (facts or {}).items()]
     if closes_at is None:
-        return "Closing date: unknown."
-    days = (closes_at - (now or datetime.now(UTC))).total_seconds() / 86_400
-    return f"Closing date: {closes_at.isoformat()}. Days left: {max(days, 0):.1f}."
+        lines.append("Closing date: unknown.")
+    else:
+        days = max(int((closes_at - (now or datetime.now(UTC))).total_seconds() // 86_400), 0)
+        lines.append(f"Closing date: {closes_at.date().isoformat()}. Days left: {days}.")
+    return "\n".join(lines)
 
 
 class LLMJudge:
@@ -45,11 +53,13 @@ class LLMJudge:
         requirements: list[Requirement],
         profile: CompanyProfile,
         closes_at: datetime | None,
+        *,
+        bid_facts: Mapping[str, str] | None = None,
     ) -> list[Finding]:
         verified = [r for r in requirements if r.verified]
         batches = [verified[i : i + BATCH_SIZE] for i in range(0, len(verified), BATCH_SIZE)]
         company = profile.model_dump_json(exclude_defaults=True)
-        context = bid_context(closes_at)
+        context = bid_context(closes_at, bid_facts)
         results = await asyncio.gather(
             *(self._judge_batch(analysis_id, batch, company, context) for batch in batches)
         )

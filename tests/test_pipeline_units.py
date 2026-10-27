@@ -212,9 +212,23 @@ def test_judge_batches_and_pass_has_no_fixability() -> None:
 
 def test_bid_context_days_left() -> None:
     now = datetime(2026, 10, 27, tzinfo=UTC)
-    assert bid_context(now + timedelta(days=3), now).endswith("Days left: 3.0.")
-    assert bid_context(now - timedelta(days=1), now).endswith("Days left: 0.0.")
+    assert bid_context(now + timedelta(days=3, hours=5), now=now).endswith("Days left: 3.")
+    assert bid_context(now - timedelta(days=1), now=now).endswith("Days left: 0.")
     assert bid_context(None) == "Closing date: unknown."
+    with_facts = bid_context(None, {"Quantity": "6", "Title": "11kV CT"})
+    assert with_facts.splitlines() == ["Quantity: 6", "Title: 11kV CT", "Closing date: unknown."]
+
+
+def test_extracted_ids_are_deterministic_per_document() -> None:
+    item = {"category": "turnover", "text": "t", "page_no": 1, "quote": "OEM Average Turnover 1 Lakh (s)"}
+    llm = FakeLLM(extract=lambda _: {"requirements": [item]})
+    document_id = uuid4()
+    pages = [page(1, "OEM Average Turnover 1 Lakh (s)")]
+    first = asyncio.run(LLMExtractor(llm).extract(document_id, pages))
+    again = asyncio.run(LLMExtractor(llm).extract(document_id, pages))
+    other = asyncio.run(LLMExtractor(llm).extract(uuid4(), pages))
+    assert first[0].id == again[0].id
+    assert first[0].id != other[0].id
 
 
 def test_fixer_drafts_from_the_finding() -> None:

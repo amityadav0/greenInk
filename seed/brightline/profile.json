@@ -1,0 +1,28 @@
+{
+  "legal_name": "Brightline Electricals",
+  "business_nature": "manufacturer",
+  "business_nature_wording": "Trading Business",
+  "constitution": "proprietorship",
+  "state": "Haryana",
+  "msme": {"udyam_registered": true, "category": "micro"},
+  "startup_recognised": false,
+  "products": [
+    "LT current transformers (ring type, 0.66 kV)",
+    "11 kV indoor current transformers",
+    "11 kV potential transformers"
+  ],
+  "annual_turnover": [
+    {"fiscal_year": "2022-23", "amount_inr": 4200000},
+    {"fiscal_year": "2023-24", "amount_inr": 4600000},
+    {"fiscal_year": "2024-25", "amount_inr": 4800000}
+  ],
+  "years_in_operation": 6,
+  "past_supplies": [
+    {"buyer": "A state power distribution utility (fictional example)", "item": "LT ring-type CTs 200/5A", "quantity": 400, "value_inr": 900000, "year": 2024},
+    {"buyer": "A municipal corporation (fictional example)", "item": "11 kV indoor CTs", "quantity": 12, "value_inr": 480000, "year": 2023}
+  ],
+  "certifications": [
+    {"kind": "iso", "name": "ISO 9001:2015", "scope": "Manufacture of instrument transformers", "valid_until": "2027-03-31"}
+  ],
+  "oem_authorisations": []
+}

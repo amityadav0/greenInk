@@ -344,3 +344,25 @@ def test_data_fence_cannot_be_forged_from_inside_the_data() -> None:
     assert fence != "0000000000000000"
     assert block.count(f"id={fence}>>") == 2
     assert block.endswith(f"<<END DATA id={fence}>>")
+
+
+class BrokenTrace(InMemoryTraceStore):
+    async def record(self, call: LLMCall, output: dict[str, Any] | None, error: str | None = None) -> None:
+        raise RuntimeError("database down")
+
+
+def test_trace_write_failure_does_not_lose_a_paid_answer() -> None:
+    gateway, _, _ = make_gateway(httpx2.MockTransport(Recorder(ok())), BrokenTrace())
+    assert run(gateway.run(LLMTask.TRIAGE, INPUT, Badge)).output.level == "green"
+
+
+def test_changing_how_a_model_is_called_invalidates_the_cache() -> None:
+    recorder = Recorder(ok())
+    trace = InMemoryTraceStore()
+    gateway, _, _ = make_gateway(httpx2.MockTransport(recorder), trace)
+    run(gateway.run(LLMTask.JUDGE, INPUT, Badge))
+    rethought, _, _ = make_gateway(
+        httpx2.MockTransport(recorder), trace, config=_config_with(LLMTask.JUDGE, thinking=False)
+    )
+    assert not run(rethought.run(LLMTask.JUDGE, INPUT, Badge)).cached
+    assert len(recorder.requests) == 2

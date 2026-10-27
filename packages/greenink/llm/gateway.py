@@ -7,6 +7,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import openai
@@ -81,7 +82,7 @@ class TokenFactoryGateway:
     ) -> LLMResult[T]:
         route = self._config.route(task)
         messages = build_messages(input)
-        key = prompt_hash(task, route.model, messages, schema)
+        key = prompt_hash(task, route, messages, schema)
 
         cached = await self._trace.find_cached(key)
         if cached is not None:
@@ -91,7 +92,7 @@ class TokenFactoryGateway:
                 log.warning("llm_cache_invalid", task=task, prompt_hash=key)
             else:
                 call = self._call(task, route.model, key, analysis_id, _Usage(), 0, LLMCallStatus.CACHED)
-                await self._trace.record(call, None)
+                await self._record(call, None)
                 return self._result(output, call, cached=True)
 
         await self._check_budget(task, route.model, key, analysis_id)
@@ -103,11 +104,11 @@ class TokenFactoryGateway:
         except GreenInkError as exc:
             status = LLMCallStatus.INVALID_OUTPUT if exc.code == ErrorCode.INTERNAL else LLMCallStatus.ERROR
             call = self._call(task, route.model, key, analysis_id, usage, _ms(started), status)
-            await self._trace.record(call, None, exc.message)
+            await self._record(call, None, exc.message)
             raise
 
         call = self._call(task, model, key, analysis_id, usage, _ms(started), LLMCallStatus.OK)
-        await self._trace.record(call, output.model_dump(mode="json"))
+        await self._record(call, output.model_dump(mode="json"))
         log.info(
             "llm_call",
             task=task,
@@ -118,6 +119,13 @@ class TokenFactoryGateway:
             latency_ms=call.latency_ms,
         )
         return self._result(output, call, cached=False)
+
+    async def _record(self, call: LLMCall, output: dict[str, Any] | None, error: str | None = None) -> None:
+        """A trace write that fails must not throw away an answer that was already paid for."""
+        try:
+            await self._trace.record(call, output, error)
+        except Exception:
+            log.exception("llm_trace_failed", task=call.task, prompt_hash=call.prompt_hash)
 
     async def _check_budget(self, task: LLMTask, model: str, key: str, analysis_id: UUID | None) -> None:
         budgets = self._config.budgets
@@ -130,7 +138,7 @@ class TokenFactoryGateway:
             reason = "This report reached its model budget; it shows the results found so far."
         if reason:
             call = self._call(task, model, key, analysis_id, _Usage(), 0, LLMCallStatus.BUDGET_EXCEEDED)
-            await self._trace.record(call, None, reason)
+            await self._record(call, None, reason)
             raise GreenInkError(ErrorCode.BUDGET_EXCEEDED, reason, retryable=False)
 
     async def _answer[T: BaseModel](

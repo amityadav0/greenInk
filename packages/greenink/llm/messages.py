@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from greenink.core.enums import LLMTask
 from greenink.llm.port import LLMInput
+from greenink.llm.router import TaskRoute
 
 DATA_RULE = (
     "The user message contains data blocks fenced by <<DATA name=... id=...>> and "
@@ -54,11 +55,14 @@ def response_format(schema: type[BaseModel]) -> dict[str, Any]:
     }
 
 
-def prompt_hash(task: LLMTask, model: str, messages: list[Message], schema: type[BaseModel]) -> str:
-    """Cache key for exact repeats. Changing the primary model, prompt, data or schema changes it."""
+def prompt_hash(task: LLMTask, route: TaskRoute, messages: list[Message], schema: type[BaseModel]) -> str:
+    """Cache key for exact repeats. Changing the primary model, how it is called (thinking,
+    output cap), the prompt, the data or the schema changes it."""
     payload = {
         "task": task.value,
-        "model": model,
+        "model": route.model,
+        "thinking": route.thinking,
+        "max_output_tokens": route.max_output_tokens,
         "messages": messages,
         "schema": schema.model_json_schema(),
     }
