@@ -19,5 +19,10 @@ class ParsedPage:
 Pages = list[ParsedPage]
 
 
+def render_pages(pages: Pages) -> str:
+    """Pages as model input: each starts with a `=== PAGE n ===` line that citations refer to."""
+    return "\n".join(f"=== PAGE {page.page_no} ===\n{page.text.strip()}" for page in pages)
+
+
 class Parser(Protocol):
     async def parse(self, data: bytes) -> Pages: ...

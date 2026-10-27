@@ -8,29 +8,16 @@ from greenink.core.models import Tender
 
 
 @dataclass(frozen=True)
-class SourceBid:
-    """A search hit as the source reports it, before it is stored as a `Tender`."""
-
-    source: TenderSource
-    source_ref: str
-    title: str
-    buyer: str | None
-    quantity: int | None
-    closes_at_iso: str | None
-    value_inr: float | None
-    official_url: str | None
-    document_url: str | None
-
-
-@dataclass(frozen=True)
 class SourceFile:
     filename: str
     content: bytes
+    content_type: str
+    source_url: str | None = None
 
 
 @dataclass(frozen=True)
 class TenderDoc:
-    """A tender with its documents' bytes, ready to hash and store."""
+    """A tender's documents: the main bid document first, then linked attachments."""
 
     tender: Tender
     files: list[SourceFile]
@@ -39,10 +26,11 @@ class TenderDoc:
 class SourceAdapter(Protocol):
     source: TenderSource
 
-    async def search(self, query: str) -> list[SourceBid]:
-        """Live search. Callers cache results by `(adapter, normalised query)`."""
+    async def search(self, query: str) -> list[Tender]:
+        """Live search, most relevant first. Ids are deterministic per (source, source_ref);
+        `meta` carries what `fetch` needs. Callers cache by `(adapter, normalised query)`."""
         ...
 
-    async def fetch(self, ref: str) -> TenderDoc:
-        """Download a tender's documents by its `source_ref`."""
+    async def fetch(self, tender: Tender) -> TenderDoc:
+        """Download a tender's documents."""
         ...

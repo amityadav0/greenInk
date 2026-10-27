@@ -10,14 +10,14 @@ import pymupdf
 import pytest
 from openpyxl import Workbook
 
-from greenink.analysis.extract import CHUNK_CHARS, LLMExtractor, chunk_pages, render_pages
+from greenink.analysis.extract import CHUNK_CHARS, LLMExtractor, chunk_pages
 from greenink.analysis.fixes import LLMFixer
 from greenink.analysis.judge import BATCH_SIZE, LLMJudge, bid_context
 from greenink.core.enums import ErrorCode, FindingStatus, LLMTask, PageMethod, Severity
 from greenink.core.errors import GreenInkError
 from greenink.core.models import CompanyProfile, Evidence, Finding, Requirement
 from greenink.docs.parse import PyMuPDFParser, sniff
-from greenink.docs.port import ParsedPage
+from greenink.docs.port import ParsedPage, render_pages
 from greenink.llm.port import LLMInput
 from tests.fakes import FakeLLM
 

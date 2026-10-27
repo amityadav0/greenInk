@@ -110,6 +110,10 @@ class TenderDocumentRow(_Timestamps, Base):
     filename: Mapped[str] = mapped_column(Text)
     blob_key: Mapped[str] = mapped_column(Text)
     page_count: Mapped[int | None]
+    source_url: Mapped[str | None] = mapped_column(Text)
+    extracted_version: Mapped[str | None] = mapped_column(
+        String(64), comment="Extractor version that has processed this document, even if it found nothing."
+    )
 
 
 class PageRow(Base):

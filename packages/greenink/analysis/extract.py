@@ -7,7 +7,7 @@ from uuid import UUID, uuid5
 from greenink.analysis.verify import normalise
 from greenink.core.enums import LLMTask
 from greenink.core.models import ExtractionResult, Requirement
-from greenink.docs.port import Pages
+from greenink.docs.port import Pages, render_pages
 from greenink.llm.port import LLM, LLMInput
 
 PROMPTS = Path(__file__).parent / "prompts"
@@ -17,10 +17,6 @@ CHUNK_CHARS = 60_000
 
 def load_prompt(version: str) -> str:
     return (PROMPTS / f"{version}.md").read_text(encoding="utf-8")
-
-
-def render_pages(pages: Pages) -> str:
-    return "\n".join(f"=== PAGE {page.page_no} ===\n{page.text.strip()}" for page in pages)
 
 
 def chunk_pages(pages: Pages, limit: int = CHUNK_CHARS) -> list[Pages]:

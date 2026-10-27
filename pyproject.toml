@@ -17,6 +17,7 @@ dependencies = [
     "pymupdf>=2.0",
     "pyyaml>=6.0.3",
     "rapidfuzz>=3.14.6",
+    "redis>=5.3",
     "sqlalchemy[asyncio]>=2.1.6",
     "structlog>=26.1.0",
     "tavily-python>=0.8.5",
@@ -69,12 +70,12 @@ explicit_package_bases = true
 files = ["packages/greenink", "apps/api/greenink_api", "apps/worker/greenink_worker", "scripts", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["arq.*", "tavily.*", "fitz.*", "pymupdf.*", "openpyxl.*"]
+module = ["arq.*", "tavily.*", "fitz.*", "pymupdf.*", "openpyxl.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # PyMuPDF's bindings are only partly typed; the parser is the one module that calls them.
-module = ["greenink.docs.parse"]
+module = ["greenink.docs.parse", "greenink.sources.gem"]
 disallow_untyped_calls = false
 warn_return_any = false
 
