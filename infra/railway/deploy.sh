@@ -60,7 +60,8 @@ args=()
 for kv in "${common[@]}"; do args+=(--set "$kv"); done
 railway variables --service api --skip-deploys "${args[@]}" \
   --set "ROLE=api" --set "PORT=8000" --set "HOST=::" --set "MIGRATE_ON_START=1" \
-  --set "SESSION_SECRET=${SESSION_SECRET:-$session_secret}"
+  --set "SESSION_SECRET=${SESSION_SECRET:-$session_secret}" \
+  --set "RATE_LIMIT_EXEMPT_TOKEN=${RATE_LIMIT_EXEMPT_TOKEN:-$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')}"
 railway variables --service worker --skip-deploys "${args[@]}" --set "ROLE=worker"
 railway variables --service web --skip-deploys \
   --set "API_URL=http://\${{api.RAILWAY_PRIVATE_DOMAIN}}:8000" --set "PORT=3000"

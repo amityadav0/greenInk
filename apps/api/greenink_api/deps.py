@@ -151,7 +151,15 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _exempt(request: Request) -> bool:
+    token = state(request).settings.rate_limit_exempt_token
+    sent = request.headers.get("x-greenink-admin")
+    return token is not None and sent is not None and hmac.compare_digest(sent, token.get_secret_value())
+
+
 async def check_limit(request: Request, limit: Limit) -> None:
+    if _exempt(request):
+        return
     redis: ArqRedis = state(request).redis
     window = int(time.time()) // limit.window_s
     key = f"rl:{limit.name}:{client_ip(request)}:{window}"

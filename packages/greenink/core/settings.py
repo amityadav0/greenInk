@@ -33,6 +33,8 @@ class Settings(BaseModel):
     """`path` for MinIO; `virtual` for Railway buckets and most hosted S3."""
 
     session_secret: SecretStr | None = None
+    rate_limit_exempt_token: SecretStr | None = None
+    """Operators (pre-warm script) send it as X-Greenink-Admin to skip per-IP limits."""
     web_origin: str = "http://localhost:3000"
 
     @field_validator("database_url")

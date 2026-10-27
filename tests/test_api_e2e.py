@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 from arq.connections import ArqRedis
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from greenink.core.settings import Settings, get_settings
 from greenink.db.seed import DEMO_COMPANY_ID, seed_demo
@@ -274,3 +275,30 @@ def test_finished_report_replays_every_stage(env: tuple[TestClient, MemoryBlobSt
     replay = [e for name, e in sse(client, accepted["events_url"]) if name == "stage"]
     assert replay == live, "reopening a finished report replays the whole history"
     assert {"verdict", "intel", "extract"} <= {e["stage"] for e in replay}
+
+
+def test_operator_token_skips_rate_limits(env: tuple[TestClient, MemoryBlobStore]) -> None:
+    client, _ = env
+    state = client.app.state.services  # type: ignore[attr-defined]
+    state.settings = state.settings.model_copy(update={"rate_limit_exempt_token": SecretStr("op-token")})
+
+    def new_reports(ip: str, token: str, count: int) -> list[int]:
+        codes = []
+        for n in range(count):
+            pdf = bid_pdf() + f"{ip}-{n}".encode()
+            upload = client.post(  # setup only: uploads use the operator token
+                "/v1/tenders/upload",
+                files={"file": (f"{n}.pdf", pdf, "application/pdf")},
+                headers={"X-Greenink-Admin": "op-token"},
+            )
+            codes.append(
+                client.post(
+                    "/v1/analyses",
+                    json={"tender_id": upload.json()["id"], "company_id": str(DEMO_COMPANY_ID)},
+                    headers={"X-Forwarded-For": ip, "X-Greenink-Admin": token},
+                ).status_code
+            )
+        return codes
+
+    assert new_reports("203.0.113.77", "op-token", 12) == [202] * 12
+    assert new_reports("203.0.113.78", "wrong", 11)[-1] == 429, "a wrong token gets the normal limit"

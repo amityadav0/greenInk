@@ -73,12 +73,70 @@ export function useCompany(): CompanyState {
   return value;
 }
 
+const DOCUMENT_KINDS: [string, string][] = [
+  ["udyam_certificate", "Udyam certificate"],
+  ["turnover_certificate", "CA turnover certificate"],
+  ["balance_sheet", "Balance sheet"],
+  ["gst_certificate", "GST certificate"],
+  ["bis_licence", "BIS licence"],
+  ["iso_certificate", "ISO certificate"],
+  ["type_test_report", "Type test report"],
+  ["oem_authorisation", "OEM authorisation"],
+  ["experience_certificate", "Experience / supply certificate"],
+  ["other", "Other"],
+];
+
+function UploadDocument({ companyId, onUploaded }: { companyId: string; onUploaded: () => void }) {
+  const [kind, setKind] = useState(DOCUMENT_KINDS[0][0]);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function upload(file: File) {
+    setStatus("Uploading…");
+    try {
+      await api.uploadCompanyDocument(companyId, file, kind);
+      setStatus("Reading the document; your profile updates in a minute.");
+      onUploaded();
+    } catch (e) {
+      setStatus(e instanceof ApiError ? e.message : "Upload failed.");
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-xs">
+      <select
+        aria-label="Document type"
+        className="max-w-[8rem] rounded border border-stone-300 bg-white px-1 py-1"
+        value={kind}
+        onChange={(e) => setKind(e.target.value)}
+      >
+        {DOCUMENT_KINDS.map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <label className="cursor-pointer rounded border border-stone-300 bg-white px-2 py-1 hover:border-ink" title={status ?? undefined}>
+        {status === "Uploading…" ? "Uploading…" : "Upload document"}
+        <input
+          type="file"
+          accept="application/pdf,image/png,image/jpeg"
+          className="sr-only"
+          onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])}
+        />
+      </label>
+    </div>
+  );
+}
+
 export function CompanySwitcher() {
   const { companies, company, select, refresh } = useCompany();
   const [adding, setAdding] = useState(false);
 
   return (
-    <div className="no-print flex items-center gap-2">
+    <div className="no-print flex flex-wrap items-center justify-end gap-2">
+      {company && !company.read_only && (
+        <UploadDocument companyId={company.id} onUploaded={() => setTimeout(() => void refresh(), 30_000)} />
+      )}
       <label className="sr-only" htmlFor="company">
         Company
       </label>

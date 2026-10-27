@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 export const dynamic = "force-dynamic";
 
 const API_URL = (process.env.API_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const FORWARD_REQUEST = ["cookie", "content-type", "last-event-id", "accept", "user-agent"];
+const FORWARD_REQUEST = ["cookie", "content-type", "last-event-id", "accept", "user-agent", "x-greenink-admin"];
 const DROP_RESPONSE = new Set(["content-encoding", "content-length", "transfer-encoding", "connection"]);
 
 async function proxy(request: NextRequest): Promise<Response> {
