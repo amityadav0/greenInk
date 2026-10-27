@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 from greenink.core.enums import LLMTask
 
+DEFAULT_CONCURRENCY = 4
+
 
 class _Config(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -25,6 +27,8 @@ class TaskRoute(_Config):
     fallback: str | None = None
     timeout_s: float = Field(gt=0)
     max_concurrency: int | None = Field(default=None, ge=1)
+    thinking: bool = Field(default=False, description="Nemotron reasoning; reasoning tokens bill as output.")
+    max_output_tokens: int = Field(default=2048, ge=16, description="Hard cap per call, reasoning included.")
 
 
 class ModelPrice(_Config):
@@ -63,6 +67,15 @@ class ModelsConfig(_Config):
 
     def route(self, task: LLMTask) -> TaskRoute:
         return self.tasks[task]
+
+    def concurrency(self, model: str) -> int:
+        """Per-model limit: the smallest `max_concurrency` among tasks routed to `model`."""
+        limits = [
+            route.max_concurrency
+            for route in self.tasks.values()
+            if route.max_concurrency and model in (route.model, route.fallback)
+        ]
+        return min(limits, default=DEFAULT_CONCURRENCY)
 
 
 def load_models_config(path: Path) -> ModelsConfig:

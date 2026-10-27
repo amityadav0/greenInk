@@ -23,11 +23,32 @@ def test_models_yaml_loads_and_routes_every_task() -> None:
     assert len(config.models()) == 4
 
 
-def test_models_yaml_is_spec_verbatim() -> None:
+def test_models_yaml_keeps_every_spec_value() -> None:
+    """SPEC's routing table is preserved; the file may only add keys (thinking, max_output_tokens)."""
     spec = (REPO_ROOT / "docs" / "SPEC.md").read_text(encoding="utf-8")
     block = re.search(r"```yaml\n(# config/models\.yaml.*?)```", spec, flags=re.DOTALL)
     assert block is not None
-    assert MODELS_YAML.read_text(encoding="utf-8") == block.group(1)
+
+    def contains(actual: object, expected: object) -> bool:
+        if isinstance(expected, dict):
+            return isinstance(actual, dict) and all(
+                key in actual and contains(actual[key], value) for key, value in expected.items()
+            )
+        return actual == expected
+
+    assert contains(yaml.safe_load(MODELS_YAML.read_text(encoding="utf-8")), yaml.safe_load(block.group(1)))
+
+
+def test_thinking_only_where_reasoning_pays() -> None:
+    config = load_models_config(MODELS_YAML)
+    assert [task for task, route in config.tasks.items() if route.thinking] == [LLMTask.JUDGE]
+
+
+def test_per_model_concurrency_is_the_tightest_limit() -> None:
+    config = load_models_config(MODELS_YAML)
+    ultra = config.route(LLMTask.JUDGE).model
+    assert config.concurrency(ultra) == 4
+    assert config.concurrency("unknown/model") == 4
 
 
 def test_unpriced_model_is_rejected(tmp_path: Path) -> None:

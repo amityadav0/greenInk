@@ -1,14 +1,16 @@
-# config/models.yaml  (IDs to confirm with scripts/check_models.py on Day 0)
+# config/models.yaml  (IDs confirmed with scripts/check_models.py on Oct 27)
+# thinking: Nemotron reasoning on/off (chat_template_kwargs.enable_thinking). Off unless the task needs it:
+#   reasoning tokens are billed as output.  max_output_tokens: hard cap per call, reasoning included.
 provider:
   base_url: https://api.tokenfactory.nebius.com/v1/
   api_key_env: NEBIUS_API_KEY
 tasks:
-  triage:        {model: nvidia/Nemotron-3_5-Lightning,      fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 20,  max_concurrency: 16}
-  profile_url:   {model: nvidia/Nemotron-3_5-Lightning,      fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 30}
-  extract:       {model: nvidia/nemotron-3-super-120b-a12b,  fallback: nvidia/Nemotron-3-Ultra-550b-a55b, timeout_s: 120, max_concurrency: 6}
-  page_vision:   {model: nvidia/Nemotron-3.5-Super-VL,       timeout_s: 60,  max_concurrency: 4}
-  judge:         {model: nvidia/Nemotron-3-Ultra-550b-a55b,  fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 120, max_concurrency: 4}
-  fix:           {model: nvidia/Nemotron-3-Ultra-550b-a55b,  fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 60}
+  triage:        {model: nvidia/Nemotron-3_5-Lightning,      fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 20,  max_concurrency: 16, thinking: false, max_output_tokens: 2048}
+  profile_url:   {model: nvidia/Nemotron-3_5-Lightning,      fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 30,  thinking: false, max_output_tokens: 2048}
+  extract:       {model: nvidia/nemotron-3-super-120b-a12b,  fallback: nvidia/Nemotron-3-Ultra-550b-a55b, timeout_s: 120, max_concurrency: 6, thinking: false, max_output_tokens: 8192}
+  page_vision:   {model: nvidia/Nemotron-3.5-Super-VL,       timeout_s: 60,  max_concurrency: 4,  thinking: false, max_output_tokens: 4096}
+  judge:         {model: nvidia/Nemotron-3-Ultra-550b-a55b,  fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 120, max_concurrency: 4, thinking: true, max_output_tokens: 12288}
+  fix:           {model: nvidia/Nemotron-3-Ultra-550b-a55b,  fallback: nvidia/nemotron-3-super-120b-a12b, timeout_s: 60,  thinking: false, max_output_tokens: 2048}
 pricing_usd_per_1m:   # input / output; from tokenfactory.nebius.com/endpoints, recheck
   nvidia/Nemotron-3_5-Lightning:      {in: 0.06, out: 0.24}
   nvidia/nemotron-3-super-120b-a12b:  {in: 0.30, out: 0.90}

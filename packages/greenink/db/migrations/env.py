@@ -5,7 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import Connection, create_engine, pool
 
-from greenink.core.settings import get_settings
+from greenink.core.settings import Settings
 from greenink.db.models import Base
 
 config = context.config
@@ -17,7 +17,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_settings().database_url,
+        url=Settings.from_env().database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
@@ -29,7 +29,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     connectable = config.attributes.get("connection")
     if connectable is None:
-        engine = create_engine(get_settings().database_url, poolclass=pool.NullPool)
+        engine = create_engine(Settings.from_env().database_url, poolclass=pool.NullPool)
         with engine.connect() as connection:
             _run(connection)
     else:
