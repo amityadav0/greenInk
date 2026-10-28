@@ -73,7 +73,11 @@ async def build_state(settings: Settings) -> AppState:
             settings.r2_secret_access_key or SecretStr(""),
             settings.r2_addressing_style,
         ),
-        gem=GemBidplusAdapter(gem, RateLimiter(gem.rate_limit_rps, redis)),
+        gem=GemBidplusAdapter(
+            gem,
+            RateLimiter(gem.rate_limit_rps, redis),
+            proxy=settings.gem_proxy_url.get_secret_value() if settings.gem_proxy_url else None,
+        ),
         sources=sources,
     )
 

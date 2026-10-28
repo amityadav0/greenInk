@@ -6,7 +6,7 @@ from typing import Any
 import boto3
 import structlog
 from botocore.config import Config
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import SecretStr
 
 from greenink.core.enums import ErrorCode
@@ -45,6 +45,9 @@ class S3BlobStore:
         def create() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
+            except BotoCoreError as exc:
+                log.error("bucket_unreachable", bucket=self._bucket, error=str(exc))
+                return
             except ClientError as exc:
                 if exc.response.get("Error", {}).get("Code") not in ("404", "NoSuchBucket"):
                     log.warning("bucket_check_failed", bucket=self._bucket, error=str(exc))

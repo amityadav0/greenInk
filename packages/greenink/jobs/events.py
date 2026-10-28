@@ -29,25 +29,30 @@ class RedisEventBus:
         return event_id
 
     async def subscribe(self, analysis_id: UUID, after: int = 0) -> AsyncIterator[tuple[int, JobEvent]]:
-        """Subscribe first, then replay stored events, so nothing published in between is lost."""
+        """Subscribe first, then replay stored events, so nothing published in between is lost.
+
+        Ids are assigned at insert but published after commit, so concurrent stages can publish
+        out of id order. Duplicates are skipped by id; a late event with a lower id is still sent.
+        """
         pubsub = self._redis.pubsub()
         await pubsub.subscribe(analysis_channel(analysis_id))
         try:
-            last = after
+            sent: set[int] = set()
             async with self._sessions() as session:
                 stored = await repos.events_after(session, analysis_id, after)
             for event_id, event in stored:
-                last = event_id
+                sent.add(event_id)
                 yield event_id, event
             while True:
                 message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=15.0)
                 if message is None:
                     continue
                 data = json.loads(message["data"])
-                if data["id"] <= last:
+                event_id = int(data["id"])
+                if event_id in sent or event_id <= after:
                     continue
-                last = data["id"]
-                yield last, JobEvent.model_validate(data["event"])
+                sent.add(event_id)
+                yield event_id, JobEvent.model_validate(data["event"])
         finally:
             await pubsub.unsubscribe()
             await pubsub.aclose()  # type: ignore[no-untyped-call]

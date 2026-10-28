@@ -14,6 +14,8 @@ from arq.connections import ArqRedis
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
+from greenink.core.enums import ErrorCode
+from greenink.core.errors import GreenInkError
 from greenink.core.settings import Settings, get_settings
 from greenink.db.seed import DEMO_COMPANY_ID, seed_demo
 from greenink.db.session import make_engine, make_sessionmaker
@@ -273,7 +275,12 @@ def test_finished_report_replays_every_stage(env: tuple[TestClient, MemoryBlobSt
     ).json()
     live = [e for name, e in sse(client, accepted["events_url"]) if name == "stage"]
     replay = [e for name, e in sse(client, accepted["events_url"]) if name == "stage"]
-    assert replay == live, "reopening a finished report replays the whole history"
+
+    # Live order is publish order; replay order is id order. The same events must arrive.
+    def key(e: dict[str, Any]) -> tuple[str, str, str]:
+        return (e["stage"], e["state"], e["message"])
+
+    assert sorted(map(key, replay)) == sorted(map(key, live)), "a finished report replays everything"
     assert {"verdict", "intel", "extract"} <= {e["stage"] for e in replay}
 
 
@@ -302,3 +309,25 @@ def test_operator_token_skips_rate_limits(env: tuple[TestClient, MemoryBlobStore
 
     assert new_reports("203.0.113.77", "op-token", 12) == [202] * 12
     assert new_reports("203.0.113.78", "wrong", 11)[-1] == 429, "a wrong token gets the normal limit"
+
+
+def test_search_falls_back_to_stored_bids_when_gem_is_unreachable(
+    env: tuple[TestClient, MemoryBlobStore],
+) -> None:
+    client, _ = env
+    first = client.get("/v1/search", params={"q": "current transformer"}).json()
+    [stored] = first["results"]
+
+    async def down(query: str) -> list[Any]:
+        raise GreenInkError(ErrorCode.UPSTREAM_UNAVAILABLE, "GeM is not responding right now.")
+
+    client.app.state.services.gem.search = down  # type: ignore[attr-defined]
+    fallback = client.get("/v1/search", params={"q": "11kV transformer"})
+    assert fallback.status_code == 200, fallback.text
+    body = fallback.json()
+    assert body["cached"] is True
+    assert [r["tender_id"] for r in body["results"]] == [stored["tender_id"]]
+
+    nothing = client.get("/v1/search", params={"q": "office chair"})
+    assert nothing.status_code == 502
+    assert nothing.json()["code"] == "upstream_unavailable"

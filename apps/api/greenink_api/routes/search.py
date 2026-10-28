@@ -6,6 +6,7 @@ from collections.abc import AsyncIterable
 from typing import Annotated
 from uuid import NAMESPACE_URL, UUID, uuid5
 
+import structlog
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
@@ -18,6 +19,8 @@ from greenink.db.seed import DEMO_COMPANY_ID
 from greenink.jobs.queue import JobName
 from greenink_api.deps import SEARCH_LIMIT, check_limit, session_id, state
 from greenink_api.errors import error_responses
+
+log = structlog.get_logger()
 
 router = APIRouter(prefix="/v1/search", tags=["search"])
 
@@ -65,18 +68,32 @@ async def search(
 
     cache_key = f"search:gem:{query}"
     cached_raw = await app.redis.get(cache_key)
+    offline = False
     if cached_raw:
         tenders = [Tender.model_validate(t) for t in json.loads(cached_raw)]
     else:
         await check_limit(request, SEARCH_LIMIT)
-        tenders = await app.gem.search(query)
-        async with app.sessions.begin() as db:
-            await repos.upsert_tenders(db, tenders)
-        await app.redis.set(
-            cache_key,
-            json.dumps([t.model_dump(mode="json") for t in tenders]),
-            ex=app.sources.adapters.gem.search_cache_ttl_s,
-        )
+        try:
+            tenders = await app.gem.search(query)
+        except GreenInkError as exc:
+            if exc.code != ErrorCode.UPSTREAM_UNAVAILABLE:
+                raise
+            # SPEC: search falls back to the cached corpus when the source is unreachable.
+            async with app.sessions() as db:
+                tenders = await repos.search_stored_tenders(db, query)
+            log.warning("search_fallback_corpus", query=query, results=len(tenders))
+            if not tenders:
+                raise
+            offline = True
+        else:
+            offline = False
+            async with app.sessions.begin() as db:
+                await repos.upsert_tenders(db, tenders)
+            await app.redis.set(
+                cache_key,
+                json.dumps([t.model_dump(mode="json") for t in tenders]),
+                ex=app.sources.adapters.gem.search_cache_ttl_s,
+            )
 
     search_id = uuid5(NAMESPACE_URL, f"greenink:search:{query}:{company_id}")
     badges, done = await _badges(request, search_id)
@@ -109,7 +126,7 @@ async def search(
         search_id=search_id,
         query=query,
         company_id=company_id,
-        cached=cached_raw is not None,
+        cached=cached_raw is not None or offline,
         results=results,
         events_url=f"/v1/search/{search_id}/events",
     )

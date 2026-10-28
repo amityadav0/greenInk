@@ -12,13 +12,11 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --all-packages --no-install-workspace
+RUN uv sync --frozen --no-dev --all-packages --no-install-workspace --no-cache
 COPY packages packages
 COPY apps/api/greenink_api apps/api/greenink_api
 COPY apps/worker/greenink_worker apps/worker/greenink_worker
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --all-packages
+RUN uv sync --frozen --no-dev --all-packages --no-cache
 
 FROM python:3.12-slim
 RUN useradd --system --uid 10001 --home-dir /app greenink

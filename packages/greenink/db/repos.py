@@ -107,6 +107,24 @@ async def upsert_tenders(session: AsyncSession, tenders: list[Tender]) -> None:
     )
 
 
+async def search_stored_tenders(session: AsyncSession, query: str, limit: int = 50) -> list[Tender]:
+    """Fallback corpus when the live source is unreachable: open stored tenders whose title has
+    every query word, those with stored documents first (they can be analysed offline)."""
+    words = [w for w in query.lower().split() if len(w) > 1][:6]
+    if not words:
+        return []
+    has_documents = select(TenderDocumentRow.id).where(TenderDocumentRow.tender_id == TenderRow.id).exists()
+    statement = select(TenderRow).where(
+        (TenderRow.closes_at.is_(None)) | (TenderRow.closes_at > datetime.now(UTC))
+    )
+    for word in words:
+        statement = statement.where(TenderRow.title.ilike(f"%{word}%"))
+    rows = await session.scalars(
+        statement.order_by(has_documents.desc(), TenderRow.closes_at.desc().nulls_last()).limit(limit)
+    )
+    return [_tender(row) for row in rows]
+
+
 async def get_tender(session: AsyncSession, tender_id: UUID) -> Tender | None:
     row = await session.get(TenderRow, tender_id)
     return _tender(row) if row else None

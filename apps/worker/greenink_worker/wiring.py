@@ -93,7 +93,11 @@ async def build(settings: Settings) -> Services:
     blobs = blob_store(settings)
     await blobs.ensure_bucket()
     gem_config = sources.adapters.gem
-    gem = GemBidplusAdapter(gem_config, RateLimiter(gem_config.rate_limit_rps, redis))
+    gem = GemBidplusAdapter(
+        gem_config,
+        RateLimiter(gem_config.rate_limit_rps, redis),
+        proxy=settings.gem_proxy_url.get_secret_value() if settings.gem_proxy_url else None,
+    )
     return Services(
         settings=settings,
         engine=engine,

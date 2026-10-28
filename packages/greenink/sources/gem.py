@@ -169,13 +169,17 @@ class GemBidplusAdapter:
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         sleep: Any = asyncio.sleep,
+        proxy: str | None = None,
     ) -> None:
+        """`proxy`: an HTTP(S) proxy on an Indian host. GeM refuses connections from many
+        non-Indian IPs (confirmed from a US cloud host), so production routes GeM through one."""
         self._config = config
         self._base = str(config.base_url).rstrip("/")
         self._limiter = limiter
         self._sleep = sleep
         self._client = httpx.AsyncClient(
             transport=transport,
+            proxy=proxy if transport is None else None,
             headers={"User-Agent": config.user_agent},
             timeout=httpx.Timeout(config.timeout_s, connect=15.0),
             follow_redirects=True,

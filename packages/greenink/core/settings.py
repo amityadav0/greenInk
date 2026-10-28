@@ -33,6 +33,9 @@ class Settings(BaseModel):
     """`path` for MinIO; `virtual` for Railway buckets and most hosted S3."""
 
     session_secret: SecretStr | None = None
+    gem_proxy_url: SecretStr | None = None
+    """HTTP(S) proxy for GeM traffic only, e.g. http://user:pass@in-host:3128 (GeM blocks many
+    non-Indian IPs). Secret because it carries credentials."""
     rate_limit_exempt_token: SecretStr | None = None
     """Operators (pre-warm script) send it as X-Greenink-Admin to skip per-IP limits."""
     web_origin: str = "http://localhost:3000"
