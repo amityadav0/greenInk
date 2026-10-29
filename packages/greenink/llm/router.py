@@ -26,6 +26,9 @@ class TaskRoute(_Config):
     model: str
     fallback: str | None = None
     timeout_s: float = Field(gt=0)
+    primary_attempts: int = Field(
+        default=3, ge=1, description="Tries on `model` before `fallback`; 1 when a fast answer matters more."
+    )
     max_concurrency: int | None = Field(default=None, ge=1)
     thinking: bool = Field(default=False, description="Nemotron reasoning; reasoning tokens bill as output.")
     max_output_tokens: int = Field(default=2048, ge=16, description="Hard cap per call, reasoning included.")

@@ -27,8 +27,6 @@ from greenink.llm.trace import TraceStore
 
 log = structlog.get_logger()
 
-PRIMARY_ATTEMPTS = 3
-"""First try plus two retries on the primary model, then the fallback (SPEC)."""
 BACKOFF_S = 0.5
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$")
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
@@ -145,7 +143,7 @@ class TokenFactoryGateway:
         self, task: LLMTask, route: TaskRoute, messages: list[Message], schema: type[T], usage: _Usage
     ) -> tuple[str, T]:
         """Primary model with retries, then the fallback; one repair call on invalid JSON."""
-        candidates = [route.model] * PRIMARY_ATTEMPTS + ([route.fallback] if route.fallback else [])
+        candidates = [route.model] * route.primary_attempts + ([route.fallback] if route.fallback else [])
         last_error = "no attempt made"
         for attempt, model in enumerate(candidates):
             if attempt:

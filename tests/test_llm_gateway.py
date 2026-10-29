@@ -22,7 +22,14 @@ from greenink.llm.router import ModelsConfig, load_models_config
 from greenink.llm.trace import InMemoryTraceStore
 from tests.conftest import REPO_ROOT
 
-CONFIG = load_models_config(REPO_ROOT / "config" / "models.yaml")
+REAL_CONFIG = load_models_config(REPO_ROOT / "config" / "models.yaml")
+# Retry tests use the SPEC default of three tries on the primary; the real triage route uses one.
+CONFIG = REAL_CONFIG.model_copy(
+    update={
+        "tasks": REAL_CONFIG.tasks
+        | {LLMTask.TRIAGE: REAL_CONFIG.tasks[LLMTask.TRIAGE].model_copy(update={"primary_attempts": 3})}
+    }
+)
 TRIAGE = CONFIG.route(LLMTask.TRIAGE)
 JUDGE = CONFIG.route(LLMTask.JUDGE)
 INPUT = LLMInput(instructions="Rate the bid.", data={"bid": "11kV current transformer, qty 6"})
@@ -170,6 +177,16 @@ def test_falls_back_after_two_retries_and_prices_the_fallback() -> None:
     assert trace.calls[0][0].model == TRIAGE.fallback, "the trace records which model actually answered"
     price = CONFIG.pricing_usd_per_1m[str(TRIAGE.fallback)]
     assert result.cost_usd == pytest.approx((100 * price.input + 20 * price.output) / 1e6)
+
+
+def test_triage_falls_back_after_one_failed_try() -> None:
+    """A search waits on triage, so its route skips the primary's retries."""
+    recorder = Recorder((504, None), ok())
+    gateway, _, _ = make_gateway(httpx2.MockTransport(recorder), config=REAL_CONFIG)
+    result = run(gateway.run(LLMTask.TRIAGE, INPUT, Badge))
+
+    assert [r["model"] for r in recorder.requests] == [TRIAGE.model, TRIAGE.fallback]
+    assert result.model == TRIAGE.fallback
 
 
 def test_gives_up_with_a_retryable_error_when_every_model_fails() -> None:
