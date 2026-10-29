@@ -28,7 +28,7 @@ function closes(value: string | null | undefined): string {
 
 export default function SearchPage() {
   const router = useRouter();
-  const { company } = useCompany();
+  const { company, error: companyError, refresh: refreshCompanies } = useCompany();
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [badges, setBadges] = useState<Record<string, TriageBadge>>({});
@@ -37,13 +37,27 @@ export default function SearchPage() {
   const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showUnlikely, setShowUnlikely] = useState(false);
+  // A search asked for before the company list arrives; it runs as soon as it does.
+  const [pending, setPending] = useState<string | null>(null);
   const closeStream = useRef<(() => void) | null>(null);
 
   useEffect(() => () => closeStream.current?.(), []);
 
+  useEffect(() => {
+    if (company && pending) void search(pending);
+    // Runs when the company arrives; `search` is recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company]);
+
   async function search(q: string) {
-    if (q.trim().length < 2 || !company) return;
+    if (q.trim().length < 2) return;
     setQuery(q);
+    if (!company) {
+      setPending(q);
+      if (companyError) void refreshCompanies();
+      return;
+    }
+    setPending(null);
     setLoading(true);
     setError(null);
     setShowUnlikely(false);
@@ -132,12 +146,17 @@ export default function SearchPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
-            disabled={loading || !company}
+            disabled={loading || (pending !== null && !companyError)}
             className="rounded-lg bg-ink px-5 py-3 font-medium text-white hover:bg-ink-dark disabled:opacity-50"
           >
-            {loading ? "Searching…" : "Search"}
+            {loading || (pending !== null && !companyError) ? "Searching…" : "Search"}
           </button>
         </form>
+        {pending !== null && !company && (
+          <p role="status" className="mt-3 text-sm text-stone-600">
+            {companyError ? `Could not load the company profile: ${companyError} Press Search to try again.` : "Loading the company profile, then searching…"}
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {SUGGESTIONS.map((s) => (
             <button
