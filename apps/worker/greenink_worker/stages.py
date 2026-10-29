@@ -29,7 +29,7 @@ from greenink.core.enums import (
 )
 from greenink.core.errors import GreenInkError
 from greenink.core.ids import sha256_hex
-from greenink.core.models import BidSummary, Page
+from greenink.core.models import BidSummary, Page, Requirement
 from greenink.db import repos
 from greenink.docs.port import ParsedPage
 from greenink.jobs.queue import JOB_QUEUE, MAX_TRIES, JobName, QueueName
@@ -182,6 +182,32 @@ async def _queue_judging(services: Services, tender_id: UUID) -> None:
         await services.queue.enqueue(JobName.JUDGE, str(analysis_id), {"analysis_id": str(analysis_id)})
 
 
+def _label(documents: list[repos.StoredDocument], document_id: UUID) -> str:
+    """'the bid document' or 'attachment 2': GeM attachment filenames are opaque hashes."""
+    index = next((i for i, d in enumerate(documents) if d.document.id == document_id), 0)
+    return "the bid document" if index == 0 else f"attachment {index}"
+
+
+def _across(count: int) -> str:
+    return f" across {count} documents" if count > 1 else ""
+
+
+async def _publish_requirement_counts(
+    services: Services, analysis_id: UUID, documents: int, requirements: list[Requirement]
+) -> None:
+    """Counts for the whole tender, not one document, so they agree with the judge's count."""
+    found, verified = len(requirements), sum(r.verified for r in requirements)
+    await services.events.publish(
+        analysis_id, Stage.EXTRACT, StageState.DONE, f"{found} requirements found{_across(documents)}."
+    )
+    await services.events.publish(
+        analysis_id,
+        Stage.VERIFY,
+        StageState.DONE,
+        f"{found} requirements found; {verified} verified on their cited page.",
+    )
+
+
 @stage(Stage.PARSE)
 async def _parse(services: Services, key: str, payload: dict[str, Any]) -> None:
     analysis_id = _analysis_id(payload)
@@ -191,8 +217,13 @@ async def _parse(services: Services, key: str, payload: dict[str, Any]) -> None:
         raise GreenInkError(ErrorCode.NOT_FOUND, "The document no longer exists.", retryable=False)
     if stored.document.page_count is None:
         if analysis_id:
+            async with services.sessions() as session:
+                documents = await repos.tender_documents(session, stored.document.tender_id)
             await services.events.publish(
-                analysis_id, Stage.PARSE, StageState.RUNNING, f"Reading {stored.document.filename}…"
+                analysis_id,
+                Stage.PARSE,
+                StageState.RUNNING,
+                f"Reading {_label(documents, stored.document.id)}…",
             )
         pages = await services.parser.parse(
             await services.blobs.get(stored.blob_key), analysis_id=analysis_id
@@ -207,10 +238,17 @@ async def _parse(services: Services, key: str, payload: dict[str, Any]) -> None:
                 ],
             )
         if analysis_id:
+            async with services.sessions() as session:
+                parsed = [
+                    d
+                    for d in await repos.tender_documents(session, stored.document.tender_id)
+                    if d.document.page_count
+                ]
+            total = sum(d.document.page_count or 0 for d in parsed)
             scanned = sum(p.method == PageMethod.VISION for p in pages)
             note = f" ({scanned} scanned, read by vision)" if scanned else ""
             await services.events.publish(
-                analysis_id, Stage.PARSE, StageState.DONE, f"Read {len(pages)} pages{note}."
+                analysis_id, Stage.PARSE, StageState.DONE, f"Read {total} pages{_across(len(parsed))}{note}."
             )
     await services.queue.enqueue(
         JobName.EXTRACT, f"{stored.document.sha256}:{services.requirements_version}", payload
@@ -229,34 +267,29 @@ async def _extract(services: Services, key: str, payload: dict[str, Any]) -> Non
             ParsedPage(page_no=p.page_no, text=p.text, method=p.method)
             for p in await repos.get_pages(session, stored.document.id)
         ]
+    tender_id = stored.document.tender_id
     if stored.extracted_version != version:
         if analysis_id:
+            async with services.sessions() as session:
+                documents = await repos.tender_documents(session, tender_id)
             await services.events.publish(
                 analysis_id,
                 Stage.EXTRACT,
                 StageState.RUNNING,
-                f"Finding requirements in {stored.document.filename}…",
+                f"Finding requirements in {_label(documents, stored.document.id)}…",
             )
         extracted = await services.extractor.extract(stored.document.id, pages, analysis_id=analysis_id)
         checked = services.verifier.verify(extracted, pages)
-        verified = sum(r.verified for r in checked)
         async with services.sessions.begin() as session:
             await repos.save_requirements(session, stored.document.id, version, checked)
         if analysis_id:
-            await services.events.publish(
-                analysis_id,
-                Stage.EXTRACT,
-                StageState.DONE,
-                f"{len(checked)} requirements found in {stored.document.filename}.",
-            )
-            await services.events.publish(
-                analysis_id,
-                Stage.VERIFY,
-                StageState.DONE,
-                f"{len(checked)} requirements found; {verified} verified on their cited page.",
-            )
+            async with services.sessions() as session:
+                documents = await repos.tender_documents(session, tender_id)
+                requirements = await repos.tender_requirements(session, tender_id, version)
+            extracted_docs = sum(d.extracted_version == version for d in documents)
+            await _publish_requirement_counts(services, analysis_id, extracted_docs, requirements)
     async with services.sessions() as session:
-        documents = await repos.tender_documents(session, stored.document.tender_id)
+        documents = await repos.tender_documents(session, tender_id)
     if all(d.extracted_version == version for d in documents):
         await _queue_judging(services, stored.document.tender_id)
 
@@ -276,6 +309,10 @@ async def _judge(services: Services, key: str, payload: dict[str, Any]) -> None:
     if tender is None or owned is None:
         raise GreenInkError(ErrorCode.NOT_FOUND, "The tender or company no longer exists.", retryable=False)
 
+    async with services.sessions() as session:
+        documents = await repos.tender_documents(session, analysis.tender_id)
+    # Final counts from the same list the judge reads, so the stages agree with "Checking N".
+    await _publish_requirement_counts(services, analysis_id, len(documents), requirements)
     verified = [r for r in requirements if r.verified]
     if not verified:
         async with services.sessions.begin() as session:
