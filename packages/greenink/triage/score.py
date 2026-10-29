@@ -97,16 +97,34 @@ def on_product_list(title: str, keys: list[frozenset[str]]) -> bool:
     return any(key <= words for key in keys)
 
 
-def check_badge(badge: TriageBadge, title: str, keys: list[frozenset[str]]) -> TriageBadge:
+_KV = re.compile(r"((?:\d+(?:\.\d+)?\s*/\s*)*\d+(?:\.\d+)?)\s*-?\s*kv\b", re.IGNORECASE)
+
+
+def voltages(text: str) -> frozenset[float]:
+    """kV ratings named in text: '15/36/110 KV' -> {15, 36, 110}; '0.66 kV' -> {0.66}."""
+    return frozenset(float(n) for chain in _KV.findall(text) for n in chain.split("/"))
+
+
+def check_badge(
+    badge: TriageBadge, title: str, keys: list[frozenset[str]], rated: frozenset[float] = frozenset()
+) -> TriageBadge:
     """The product list is the strongest signal, so it bounds the model both ways: green
     needs the bid to be on the list (the model alone matched relays and insulators to a CT
     maker), and a bid on the list is never red (it wrote off real CTs over a guessed voltage).
-    Without a product list there is nothing to check."""
+    Green also needs a kV rating the company lists, when both name one (it called a 245 kV
+    CT winnable for an 11 kV maker). Without a product list there is nothing to check."""
     if not keys:
         return badge
     listed = on_product_list(title, keys)
     if badge.level == TriageLevel.GREEN and not listed:
         return TriageBadge(level=TriageLevel.AMBER, reason=f"Not on your product list. {badge.reason}"[:200])
+    asked = voltages(title)
+    if badge.level == TriageLevel.GREEN and rated and asked and not asked & rated:
+        named = "/".join(f"{v:g}" for v in sorted(asked))
+        yours = ", ".join(f"{v:g}" for v in sorted(rated))
+        return TriageBadge(
+            level=TriageLevel.AMBER, reason=f"Asks for {named} kV; you list {yours} kV. {badge.reason}"[:200]
+        )
     if badge.level == TriageLevel.RED and listed:
         return TriageBadge(level=TriageLevel.AMBER, reason=f"Your product type, but: {badge.reason}"[:200])
     return badge
@@ -135,8 +153,9 @@ class LLMTriage:
             log.info("triage_rescore", missed=len(missed))
             badges |= await self._score_all(missed, company)
         keys = product_keys(profile.products)
+        rated = voltages(" ".join(profile.products))
         titles = {b.source_ref: b.title for b in bids}
-        return {ref: check_badge(badge, titles[ref], keys) for ref, badge in badges.items()}
+        return {ref: check_badge(badge, titles[ref], keys, rated) for ref, badge in badges.items()}
 
     async def _score_all(self, bids: list[BidSummary], company: str) -> dict[str, TriageBadge]:
         batches = [bids[i : i + BATCH_SIZE] for i in range(0, len(bids), BATCH_SIZE)]

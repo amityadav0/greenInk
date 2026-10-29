@@ -8,7 +8,7 @@ from uuid import uuid4
 from greenink.core.enums import TenderSource, TriageLevel
 from greenink.core.models import BidSummary, CompanyProfile, TriageBadge
 from greenink.llm.port import LLMInput
-from greenink.triage.score import LLMTriage, check_badge, on_product_list, product_keys
+from greenink.triage.score import LLMTriage, check_badge, on_product_list, product_keys, voltages
 from tests.conftest import REPO_ROOT
 from tests.fakes import FakeLLM
 
@@ -42,6 +42,28 @@ def test_lookalikes_become_amber() -> None:
         checked = check_badge(GREEN, title, KEYS)
         assert checked.level == TriageLevel.AMBER, title
         assert checked.reason.startswith("Not on your product list.")
+
+
+RATED = voltages(" ".join(BRIGHTLINE))
+
+
+def test_voltages_read_ratings_and_chains() -> None:
+    assert {0.66, 11, 33} == RATED
+    assert voltages("CURRENT TRANSFORMER, 15/36/110 KV. PART NO.") == {15, 36, 110}
+    assert voltages("11KV and 33KV Outdoor CT") == {11, 33}
+    assert voltages("Ring type CT 200/5A") == frozenset()
+
+
+def test_green_needs_a_rating_the_company_lists() -> None:
+    off = check_badge(GREEN, "Supply of 245 KV Current Transformer for various Substations", KEYS, RATED)
+    assert off.level == TriageLevel.AMBER
+    assert off.reason.startswith("Asks for 245 kV; you list 0.66, 11, 33 kV.")
+    for title in [
+        "E4963063 11KV and 33KV Outdoor CT 01-SG4960097000-11 KV CT RATIO CURRENT TRANSFORMER",
+        "Potential Transformer 33KV OIL IMMERSD O/DR 100/200VA 1PH",
+        "Current Transformer 200/5A ring type",  # no rating named: nothing to compare
+    ]:
+        assert check_badge(GREEN, title, KEYS, RATED) == GREEN, title
 
 
 def test_red_for_a_listed_product_becomes_amber() -> None:
