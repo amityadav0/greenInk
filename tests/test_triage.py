@@ -74,9 +74,13 @@ def test_badges_map_back_by_local_ref_and_skipped_bids_are_rescored() -> None:
         listed = json.loads(input.data["bids"])
         # The first pass skips the last bid; the rescore sees only that one.
         shown = listed[:-1] if len(listed) == 3 else listed
+        reasons = {"bid-2": "About HRC Fuse Link (like bid-1)"}
         return {
             "scores": [
-                {"source_ref": b["source_ref"], "badge": {"level": "red", "reason": f"About {b['title']}"}}
+                {
+                    "source_ref": b["source_ref"],
+                    "badge": {"level": "red", "reason": reasons.get(b["source_ref"], f"About {b['title']}")},
+                }
                 for b in shown
             ]
         }
@@ -86,7 +90,7 @@ def test_badges_map_back_by_local_ref_and_skipped_bids_are_rescored() -> None:
 
     assert {ref: badge.reason for ref, badge in badges.items()} == {
         "GEM/2026/B/8211793": "About 11 kV Current Transformer",
-        "GEM/2026/B/8211794": "About HRC Fuse Link",
+        "GEM/2026/B/8211794": "About HRC Fuse Link (like GEM/2026/B/8211793)",
         "GEM/2026/B/8211795": "About Office Chair",
     }
     assert len(llm.calls) == 2
