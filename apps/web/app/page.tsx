@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { WinBadge } from "@/components/badge";
 import { useCompany } from "@/components/company";
+import { CompanyCard, FeaturedReports, HowItWorks } from "@/components/landing";
 import { api, ApiError, type BidSummary, type SearchResponse, subscribe, type TriageBadge } from "@/lib/api";
 
 const SUGGESTIONS = [
@@ -166,6 +167,14 @@ export default function SearchPage() {
       )}
 
       {loading && !result && <ResultsSkeleton />}
+
+      {!result && !loading && (
+        <>
+          <FeaturedReports />
+          <HowItWorks />
+          {company && <CompanyCard company={company} />}
+        </>
+      )}
 
       {result && (
         <section className={`mt-10 ${loading ? "opacity-50" : ""}`}>
