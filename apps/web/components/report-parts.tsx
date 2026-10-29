@@ -12,25 +12,82 @@ const VERDICT_STYLE: Record<Verdict, { label: string; className: string }> = {
   skip: { label: "Skip", className: "border-block bg-block-light text-block" },
 };
 
-export function VerdictCard({ verdict, reason, status }: { verdict: Verdict | null | undefined; reason: string | null | undefined; status: string }) {
+const HEADLINE: Record<Verdict, (count: number) => string> = {
+  skip: (n) => `${n === 1 ? "One requirement" : `${n} requirements`} you can't meet before this bid closes.`,
+  fix_then_bid: (n) => `You can bid after closing ${n === 1 ? "one gap" : `${n} gaps`}. Each comes with a fix you can draft in one click.`,
+  bid: () => "No critical or high-risk gaps found. Check the documents to prepare below.",
+};
+
+export function VerdictCard({
+  analysis,
+  findings,
+  onCite,
+}: {
+  analysis: Schemas["Analysis"];
+  findings: Finding[];
+  onCite: (finding: Finding) => void;
+}) {
+  const { verdict, verdict_reason: reason, status } = analysis;
   if (!verdict) {
     const running = status === "queued" || status === "running";
     return (
       <div className="rounded-xl border border-stone-200 bg-white p-5">
         <p className="text-sm font-medium uppercase tracking-wide text-stone-500">Verdict</p>
         <p className="mt-1 text-xl font-semibold">{running ? "Reading the tender…" : "No verdict"}</p>
-        {!running && <p className="mt-1 text-stone-600">{reason ?? "See the stage messages below."}</p>}
+        <p className="mt-1 text-stone-600">
+          {running
+            ? "Usually 30 to 60 seconds; long tenders with many attachments take up to 3 minutes. Progress is below."
+            : (reason ?? "See the stage messages below.")}
+        </p>
       </div>
     );
   }
   const style = VERDICT_STYLE[verdict];
+  const deciding = decidingFindings(analysis, findings);
   return (
     <div className={`rounded-xl border-2 p-5 ${style.className}`}>
-      <p className="text-sm font-medium uppercase tracking-wide opacity-80">Verdict, computed from the findings below</p>
+      <p className="text-sm font-medium uppercase tracking-wide opacity-80">Verdict, computed by rules from the findings</p>
       <p className="mt-1 text-3xl font-semibold">{style.label}</p>
-      {reason && <p className="mt-2 text-stone-800">{reason}</p>}
+      <p className="mt-2 font-medium text-stone-800">{deciding.length > 0 ? HEADLINE[verdict](deciding.length) : reason}</p>
+      {deciding.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {deciding.slice(0, TOP_BLOCKERS).map((f) => (
+            <li key={f.id} className="flex items-start gap-3 rounded-lg bg-white/70 p-3 text-sm text-stone-800">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{plainWords(f.requirement.text)}</p>
+                <p className="mt-0.5 text-stone-600">{plainWords(f.reason)}</p>
+              </div>
+              <button
+                onClick={() => onCite(f)}
+                className="shrink-0 rounded-full border border-ink/40 bg-white px-2 py-0.5 text-xs font-medium text-ink hover:bg-ink-light"
+                title="Open the tender at this page"
+              >
+                Page {f.requirement.page_no}
+              </button>
+            </li>
+          ))}
+          {deciding.length > TOP_BLOCKERS && (
+            <li className="text-sm text-stone-700">…and {deciding.length - TOP_BLOCKERS} more in Blockers below.</li>
+          )}
+        </ul>
+      )}
     </div>
   );
+}
+
+const TOP_BLOCKERS = 3;
+const SEVERITY_RANK: Record<Finding["severity"], number> = { critical: 0, high: 1, medium: 2, low: 3 };
+const STATUS_RANK: Record<Finding["status"], number> = { fail: 0, missing_proof: 1, unclear: 2, pass: 3 };
+
+function byRisk(a: Finding, b: Finding): number {
+  return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || STATUS_RANK[a.status] - STATUS_RANK[b.status];
+}
+
+/** The findings the fired verdict rule cites (skip rules before fix rules), most severe first. */
+function decidingFindings(analysis: Schemas["Analysis"], findings: Finding[]): Finding[] {
+  const rule = (analysis.verdict_rules ?? []).find((r) => r.verdict === analysis.verdict);
+  const ids = new Set(rule?.finding_ids ?? []);
+  return dedupe(findings.filter((f) => ids.has(f.id)).sort(byRisk)).map((g) => g.finding);
 }
 
 const STAGE_LABEL: Record<string, string> = {
@@ -69,69 +126,158 @@ const STATUS_STYLE: Record<Finding["status"], string> = {
   pass: "bg-ink-light text-ink-dark",
 };
 const STATUS_LABEL: Record<Finding["status"], string> = {
-  fail: "Fail",
-  missing_proof: "Missing proof",
+  fail: "You don't meet this",
+  missing_proof: "Proof needed",
   unclear: "Unclear",
-  pass: "Pass",
+  pass: "You meet this",
+};
+const CATEGORY_LABEL: Record<string, string> = {
+  turnover: "Turnover",
+  experience: "Past experience",
+  mse_exemption: "MSE exemption",
+  startup_exemption: "Startup exemption",
+  oem_authorisation: "OEM authorisation",
+  bis_certification: "BIS licence",
+  type_test: "Type test",
+  emd: "Earnest money (EMD)",
+  epbg: "Performance guarantee",
+  document: "Document",
+  delivery: "Delivery",
+  atc: "Buyer's extra terms",
+  boq_format: "Price schedule format",
+  other: "Other",
 };
 
+type Group = { finding: Finding; similar: number };
+
+/** One row per clause: the model sometimes files the same quote under two categories. */
+function dedupe(findings: Finding[]): Group[] {
+  const groups = new Map<string, Group>();
+  for (const f of findings) {
+    const key = `${f.requirement.document_id}:${f.requirement.page_no}:${f.requirement.quote.replace(/\s+/g, " ").trim().slice(0, 160).toLowerCase()}`;
+    const group = groups.get(key);
+    if (group) group.similar += 1;
+    else groups.set(key, { finding: f, similar: 0 });
+  }
+  return [...groups.values()];
+}
+
 export function FindingsTable({
+  analysis,
   findings,
   onCite,
   onFix,
 }: {
+  analysis: Schemas["Analysis"];
   findings: Finding[];
   onCite: (finding: Finding) => void;
   onFix: (finding: Finding) => void;
 }) {
   const [showPass, setShowPass] = useState(false);
-  const risks = findings.filter((f) => f.status !== "pass");
-  const shown = showPass ? findings : risks;
+  const blocking = new Set((analysis.verdict_rules ?? []).flatMap((r) => r.finding_ids ?? []));
+  const sorted = [...findings].sort(byRisk);
+  const blockers = dedupe(sorted.filter((f) => f.status !== "pass" && blocking.has(f.id)));
+  const prepare = dedupe(sorted.filter((f) => f.status !== "pass" && !blocking.has(f.id)));
+  const passes = dedupe(sorted.filter((f) => f.status === "pass"));
+  const row = (g: Group) => <FindingRow key={g.finding.id} group={g} onCite={onCite} onFix={onFix} />;
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          {risks.length} risk{risks.length === 1 ? "" : "s"} in {findings.length} requirements
-        </h2>
-        <label className="flex items-center gap-2 text-sm text-stone-600">
-          <input type="checkbox" checked={showPass} onChange={(e) => setShowPass(e.target.checked)} />
-          Show passing
-        </label>
-      </div>
-      <ul className="space-y-3">
-        {shown.map((f) => (
-          <li key={f.id} className="rounded-xl border border-stone-200 bg-white p-4">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_STYLE[f.status]}`}>{STATUS_LABEL[f.status]}</span>
-              <span className="rounded-full bg-stone-100 px-2 py-0.5 capitalize text-stone-700">{f.severity}</span>
-              <span className="text-stone-500">{f.requirement.category.replaceAll("_", " ")}</span>
-              <button
-                onClick={() => onCite(f)}
-                className="ml-auto rounded-full border border-ink/40 px-2 py-0.5 font-medium text-ink hover:bg-ink-light"
-                title="Open the tender at this page"
-              >
-                Page {f.requirement.page_no}
-              </button>
-            </div>
-            <p className="mt-2 font-medium">{f.requirement.text}</p>
-            <blockquote className="mt-1 whitespace-pre-line border-l-2 border-stone-300 pl-3 text-sm italic text-stone-600">
-              “{readableQuote(f.requirement.quote)}”
-            </blockquote>
-            <p className="mt-2 text-sm">
-              <span className="text-stone-500">You have: </span>
-              {plainWords(f.evidence.company_has)}
-            </p>
-            {f.status !== "pass" && <p className="mt-1 text-sm text-stone-700">{plainWords(f.reason)}</p>}
-            {f.status !== "pass" && (
-              <button onClick={() => onFix(f)} className="no-print mt-3 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white">
-                {f.fix ? "View the fix" : "Draft the fix"}
-              </button>
-            )}
-          </li>
-        ))}
-        {shown.length === 0 && <li className="text-sm text-stone-600">No risks found in the verified requirements.</li>}
-      </ul>
+    <div className="space-y-6">
+      <p className="text-sm text-stone-600">
+        {findings.length} requirements read from the tender. Each quote below was checked against its cited page before
+        it reached you.
+      </p>
+      <FindingGroup
+        title="Blockers"
+        hint="Critical or high-risk gaps. These decide the verdict."
+        count={blockers.length}
+        empty="No blockers."
+      >
+        {blockers.map(row)}
+      </FindingGroup>
+      <FindingGroup
+        title="Documents to prepare"
+        hint="Lower-risk gaps, mostly paperwork to upload with the bid."
+        count={prepare.length}
+        empty="Nothing else to prepare."
+      >
+        {prepare.map(row)}
+      </FindingGroup>
+      <section>
+        <button
+          onClick={() => setShowPass((v) => !v)}
+          className="no-print flex w-full items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-left"
+          aria-expanded={showPass}
+        >
+          <span className="text-lg font-semibold">You meet these · {passes.length}</span>
+          <span className="text-sm text-stone-600">{showPass ? "Hide" : "Show"}</span>
+        </button>
+        {showPass && <ul className="mt-3 space-y-3">{passes.map(row)}</ul>}
+      </section>
     </div>
+  );
+}
+
+function FindingGroup({
+  title,
+  hint,
+  count,
+  empty,
+  children,
+}: {
+  title: string;
+  hint: string;
+  count: number;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold">
+        {title} · {count}
+      </h2>
+      <p className="mb-2 text-sm text-stone-600">{hint}</p>
+      {count === 0 ? <p className="text-sm text-stone-500">{empty}</p> : <ul className="space-y-3">{children}</ul>}
+    </section>
+  );
+}
+
+function FindingRow({ group, onCite, onFix }: { group: Group; onCite: (f: Finding) => void; onFix: (f: Finding) => void }) {
+  const f = group.finding;
+  return (
+    <li className="rounded-xl border border-stone-200 bg-white p-4">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_STYLE[f.status]}`}>{STATUS_LABEL[f.status]}</span>
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 capitalize text-stone-700">{f.severity}</span>
+        <span className="text-stone-500">{CATEGORY_LABEL[f.requirement.category] ?? f.requirement.category}</span>
+        <button
+          onClick={() => onCite(f)}
+          className="ml-auto rounded-full border border-ink/40 px-2 py-0.5 font-medium text-ink hover:bg-ink-light"
+          title="Open the tender at this page, with the quote highlighted"
+        >
+          Page {f.requirement.page_no}
+        </button>
+      </div>
+      <p className="mt-2 font-medium">{plainWords(f.requirement.text)}</p>
+      <blockquote className="mt-1 whitespace-pre-line border-l-2 border-stone-300 pl-3 text-sm italic text-stone-600">
+        “{readableQuote(f.requirement.quote)}”
+      </blockquote>
+      {f.requirement.verified && (
+        <p className="mt-1 text-xs text-ink-dark" title="The quote fuzzy-matches the text of the cited page">
+          ✓ Quote verified on page {f.requirement.page_no}
+          {group.similar > 0 && <span className="text-stone-500"> · also listed under {group.similar} other heading{group.similar === 1 ? "" : "s"}</span>}
+        </p>
+      )}
+      <p className="mt-2 text-sm">
+        <span className="text-stone-500">You have: </span>
+        {plainWords(f.evidence.company_has)}
+      </p>
+      {f.status !== "pass" && <p className="mt-1 text-sm text-stone-700">{plainWords(f.reason)}</p>}
+      {f.status !== "pass" && (
+        <button onClick={() => onFix(f)} className="no-print mt-3 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white">
+          {f.fix ? "View the fix" : "Draft the fix"}
+        </button>
+      )}
+    </li>
   );
 }
 
@@ -230,6 +376,16 @@ export function PricePanel({ intel }: { intel: Schemas["PriceIntel"][] }) {
   );
 }
 
+const TASK_LABEL: Record<string, string> = {
+  triage: "Score bids",
+  profile_url: "Profile from website",
+  extract: "Find requirements",
+  page_vision: "Read scanned page",
+  judge: "Check against company",
+  fix: "Draft a fix",
+  price_intel: "Read prices",
+};
+
 export function TraceDrawer({ trace, onClose }: { trace: AnalysisTrace | null; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" role="dialog" aria-modal="true" aria-label="Model Trace">
@@ -260,7 +416,7 @@ export function TraceDrawer({ trace, onClose }: { trace: AnalysisTrace | null; o
                 <tbody className="divide-y divide-stone-100">
                   {trace.calls.map((c) => (
                     <tr key={c.id}>
-                      <td className="py-1.5 pr-2">{c.task.replaceAll("_", " ")}</td>
+                      <td className="py-1.5 pr-2">{TASK_LABEL[c.task] ?? c.task.replaceAll("_", " ")}</td>
                       <td className="py-1.5 pr-2 font-mono text-xs">
                         {c.model.replace("nvidia/", "")}
                         {c.status !== "ok" && <span className="ml-1 text-stone-500">({c.status})</span>}

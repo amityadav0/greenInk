@@ -122,7 +122,7 @@ export default function ReportPage() {
           </p>
         </div>
 
-        <VerdictCard verdict={analysis.verdict} reason={analysis.verdict_reason} status={analysis.status} />
+        <VerdictCard analysis={analysis} findings={report.findings} onCite={cite} />
 
         <section className="rounded-xl border border-stone-200 bg-white p-4">
           <Stages events={stageEvents} />
@@ -147,7 +147,7 @@ export default function ReportPage() {
         </div>
 
         {report.findings.length > 0 && (
-          <FindingsTable findings={report.findings} onCite={cite} onFix={setFixing} />
+          <FindingsTable analysis={analysis} findings={report.findings} onCite={cite} onFix={setFixing} />
         )}
 
         <section className="rounded-xl border border-stone-200 bg-white p-4">
