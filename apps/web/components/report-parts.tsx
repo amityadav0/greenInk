@@ -359,29 +359,67 @@ function rupees(value: number | null | undefined): string {
 }
 
 export function PricePanel({ intel }: { intel: Schemas["PriceIntel"][] }) {
-  if (intel.length === 0) return <p className="text-sm text-stone-500">Searching past prices…</p>;
+  if (intel.length === 0) return <p className="text-sm text-stone-500">Searching public prices with Tavily…</p>;
   return (
     <div className="space-y-4">
-      {intel.map((p) => (
-        <div key={p.item}>
-          <p className="text-sm text-stone-600">{p.item}</p>
-          <p className="mt-1 text-2xl font-semibold">
-            {p.band_low == null ? "No unit prices found" : `${rupees(p.band_low)} – ${rupees(p.band_high)}`}
-          </p>
-          <p className="text-xs text-stone-500">per unit, from public sources found by Tavily</p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {(p.sources ?? []).map((s) => (
-              <li key={s.url} className="flex gap-2">
-                <span className="w-20 shrink-0 text-right font-medium">{s.price_inr ? rupees(s.price_inr) : "–"}</span>
-                <a className="min-w-0 truncate text-ink underline-offset-2 hover:underline" href={s.url} target="_blank" rel="noreferrer">
-                  {s.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      {intel.map((p) => {
+        const sources = p.sources ?? [];
+        // Priced sources are what the band is computed from; the rest only show what was searched.
+        const pricedSources = sources.filter((s) => s.price_inr);
+        const unpriced = sources.filter((s) => !s.price_inr);
+        const priced = pricedSources.length;
+        return (
+          <div key={p.item}>
+            <p className="text-sm text-stone-600">{p.item}</p>
+            {p.band_low == null ? (
+              <>
+                <p className="mt-1 font-semibold">No reliable unit price found</p>
+                <p className="text-xs text-stone-500">
+                  Tavily found {sources.length} public page{sources.length === 1 ? "" : "s"}, but fewer than two quoted a
+                  unit price for this item. Check past GeM results for similar bids before quoting.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-2xl font-semibold">
+                  {rupees(p.band_low)} – {rupees(p.band_high)}
+                </p>
+                <p className="text-xs text-stone-500">
+                  Indicative per-unit band from {priced} public price{priced === 1 ? "" : "s"} found by Tavily (outliers
+                  dropped). Not a quote: specifications vary.
+                </p>
+              </>
+            )}
+            {priced > 0 && <SourceList sources={pricedSources} />}
+            {unpriced.length > 0 && (
+              <details className="mt-2 text-sm">
+                <summary className="cursor-pointer text-stone-500">
+                  {unpriced.length} other page{unpriced.length === 1 ? "" : "s"} searched, with no unit price
+                </summary>
+                <SourceList sources={unpriced} />
+              </details>
+            )}
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+function SourceList({ sources }: { sources: Schemas["PriceSource"][] }) {
+  return (
+    <ul className="mt-3 space-y-2 text-sm">
+      {sources.map((s) => (
+        <li key={s.url} className="flex gap-2">
+          <span className={`w-20 shrink-0 text-right ${s.price_inr ? "font-medium" : "text-stone-400"}`}>
+            {s.price_inr ? rupees(s.price_inr) : "–"}
+          </span>
+          <a className="min-w-0 truncate text-ink underline-offset-2 hover:underline" href={s.url} target="_blank" rel="noreferrer">
+            {s.title}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 
