@@ -47,7 +47,9 @@ def test_thinking_only_where_reasoning_pays() -> None:
 def test_per_model_concurrency_is_the_tightest_limit() -> None:
     config = load_models_config(MODELS_YAML)
     ultra = config.route(LLMTask.JUDGE).model
+    super_ = config.route(LLMTask.EXTRACT).model
     assert config.concurrency(ultra) == 4
+    assert config.concurrency(super_) == 6, "judge's fallback must not throttle extraction"
     assert config.concurrency("unknown/model") == 4
 
 

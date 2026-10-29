@@ -255,3 +255,15 @@ def test_fixer_drafts_from_the_finding() -> None:
     assert task == LLMTask.FIX
     assert analysis_id == finding.analysis_id
     assert "Turnover at least 50 lakh" in sent.data["finding"]
+
+
+def test_long_documents_keep_lead_pages_and_eligibility_pages() -> None:
+    from greenink.analysis.extract import LONG_DOCUMENT_PAGES, likely_requirement_pages
+
+    short = [page(n, "Rated burden 30 VA") for n in range(1, LONG_DOCUMENT_PAGES + 1)]
+    assert likely_requirement_pages(short) == short, "short documents are never filtered"
+    long = [page(n, "Rated burden 30 VA, accuracy class 0.2S") for n in range(1, 61)]
+    long[39] = page(40, "The bidder shall submit type test reports from an NABL laboratory.")
+    long[50] = page(51, "BIS licence is mandatory.")
+    kept = [p.page_no for p in likely_requirement_pages(long)]
+    assert kept == [1, 2, 3, 40, 51]

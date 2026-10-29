@@ -69,13 +69,14 @@ class ModelsConfig(_Config):
         return self.tasks[task]
 
     def concurrency(self, model: str) -> int:
-        """Per-model limit: the smallest `max_concurrency` among tasks routed to `model`."""
-        limits = [
-            route.max_concurrency
-            for route in self.tasks.values()
-            if route.max_concurrency and model in (route.model, route.fallback)
+        """Per-model limit: the smallest `max_concurrency` among tasks whose primary is `model`.
+        Fallback routes only count for models that are never primary, so a fallback setting
+        cannot throttle a model's own work."""
+        primary = [r.max_concurrency for r in self.tasks.values() if r.max_concurrency and r.model == model]
+        fallback = [
+            r.max_concurrency for r in self.tasks.values() if r.max_concurrency and r.fallback == model
         ]
-        return min(limits, default=DEFAULT_CONCURRENCY)
+        return min(primary or fallback, default=DEFAULT_CONCURRENCY)
 
 
 def load_models_config(path: Path) -> ModelsConfig:

@@ -1,6 +1,7 @@
 """Requirement extraction with the `extract` task (prompt: prompts/extract.v1.md)."""
 
 import asyncio
+import re
 from pathlib import Path
 from uuid import UUID, uuid5
 
@@ -11,8 +12,27 @@ from greenink.docs.port import Pages, render_pages
 from greenink.llm.port import LLM, LLMInput
 
 PROMPTS = Path(__file__).parent / "prompts"
-CHUNK_CHARS = 60_000
-"""About 15k tokens of tender text per call; long documents are split on page boundaries."""
+CHUNK_CHARS = 30_000
+"""About 7k tokens of tender text per call, split on page boundaries, run in parallel."""
+LONG_DOCUMENT_PAGES = 30
+"""Longer documents (typically technical specifications) are pre-filtered to likely pages."""
+LEAD_PAGES = 3
+REQUIREMENT_HINTS = re.compile(
+    r"bidder|tenderer|eligib|qualif|certificat|\bbis\b|licen[cs]e|type[- ]test|experience|turnover|"
+    r"\boem\b|authori[sz]ation|\bemd\b|e?pbg|earnest|performance (bank )?guarantee|"
+    r"shall (submit|upload|furnish)|must (submit|upload|furnish|have)|"
+    r"documents? (required|to be submitted)|reject|disqualif|undertaking|declaration",
+    re.IGNORECASE,
+)
+
+
+def likely_requirement_pages(pages: Pages) -> Pages:
+    """For long documents, the first pages plus every page with eligibility language. Pages of
+    pure technical parameters (ratings, dimensions, drawings) are skipped: they rarely hold
+    bidder requirements and dominate cost and latency."""
+    if len(pages) <= LONG_DOCUMENT_PAGES:
+        return pages
+    return [p for i, p in enumerate(pages) if i < LEAD_PAGES or REQUIREMENT_HINTS.search(p.text)]
 
 
 def load_prompt(version: str) -> str:
@@ -44,7 +64,7 @@ class LLMExtractor:
     async def extract(
         self, document_id: UUID, pages: Pages, *, analysis_id: UUID | None = None
     ) -> list[Requirement]:
-        readable = [page for page in pages if page.text.strip()]
+        readable = likely_requirement_pages([page for page in pages if page.text.strip()])
         if not readable:
             return []
         results = await asyncio.gather(
