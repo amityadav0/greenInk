@@ -89,7 +89,11 @@ def main() -> int:
         report_queries = {q.strip().lower() for q in args.report_queries.split(",") if q.strip()}
         candidates: list[tuple[int, dict[str, object]]] = []
         for query in SUGGESTIONS:
-            results = wait_for_badges(client, query)
+            try:
+                results = wait_for_badges(client, query)
+            except (httpx.HTTPError, RuntimeError) as exc:
+                print(f"search {query!r}: skipped ({type(exc).__name__}); a slow GeM answer, try later")
+                continue
             badges = [r["badge"]["level"] for r in results if r.get("badge")]  # type: ignore[index]
             print(f"search {query!r}: {len(results)} bids, {badges.count('green')} green")
             if query.lower() not in report_queries:
