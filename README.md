@@ -5,7 +5,8 @@
 > Small factories don't lose government tenders on price. They lose on page 37.
 
 **Live demo:** https://web-production-65432.up.railway.app (no login; the demo company is fictional).
-Video: coming Oct 29.
+
+**Demo video (2:48):** https://www.youtube.com/watch?v=vAO4GPgSs84
 
 ## What it does
 
