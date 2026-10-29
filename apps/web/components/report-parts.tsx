@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, type AnalysisTrace, type Finding, type Fix, type JobEvent, type Schemas } from "@/lib/api";
 import { plainWords, readableQuote } from "@/lib/text";
+import { Markdown, plainText } from "@/components/markdown";
 
 type Verdict = NonNullable<Schemas["Analysis"]["verdict"]>;
 
@@ -327,18 +328,18 @@ export function FixDialog({ analysisId, finding, onClose }: { analysisId: string
         {error && <p className="mt-2 text-block">{error}</p>}
         {fix && (
           <>
-            <h2 className="mt-1 text-xl font-semibold">{plainWords(fix.title)}</h2>
-            <pre className="mt-3 whitespace-pre-wrap rounded-md bg-stone-50 p-3 font-sans text-sm leading-relaxed">{plainWords(fix.body)}</pre>
+            <h2 className="mt-1 text-xl font-semibold">{plainText(plainWords(fix.title))}</h2>
+            <Markdown source={plainWords(fix.body)} className="mt-3 rounded-md bg-stone-50 p-3 text-sm leading-relaxed" />
             {(fix.steps ?? []).length > 0 && (
               <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm">
                 {(fix.steps ?? []).map((step) => (
-                  <li key={step}>{plainWords(step)}</li>
+                  <li key={step}>{plainText(plainWords(step))}</li>
                 ))}
               </ol>
             )}
             <button
               className="mt-4 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
-              onClick={() => void navigator.clipboard?.writeText(plainWords(fix.body))}
+              onClick={() => void navigator.clipboard?.writeText(plainText(plainWords(fix.body)))}
             >
               Copy text
             </button>
