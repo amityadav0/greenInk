@@ -35,6 +35,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showUnlikely, setShowUnlikely] = useState(false);
   const closeStream = useRef<(() => void) | null>(null);
 
   useEffect(() => () => closeStream.current?.(), []);
@@ -44,6 +45,7 @@ export default function SearchPage() {
     setQuery(q);
     setLoading(true);
     setError(null);
+    setShowUnlikely(false);
     closeStream.current?.();
     try {
       const response = await api.search(q, company.id);
@@ -99,6 +101,12 @@ export default function SearchPage() {
   const ranked = result
     ? [...result.results].sort((a, b) => rank(badges[a.source_ref], scored) - rank(badges[b.source_ref], scored))
     : [];
+  // Once scoring is done, bids judged unlikely fold away: GeM's search is loose, and a wall of
+  // red hides the few bids worth opening. With nothing better, the closest few stay visible.
+  const likely = ranked.filter((bid) => badges[bid.source_ref]?.level !== "red");
+  const folded = scored && !showUnlikely && likely.length < ranked.length;
+  const visible = folded ? (likely.length > 0 ? likely : ranked.slice(0, CLOSEST_WHEN_NONE)) : ranked;
+  const hidden = ranked.length - visible.length;
 
   return (
     <div>
@@ -157,11 +165,12 @@ export default function SearchPage() {
         </p>
       )}
 
+      {loading && !result && <ResultsSkeleton />}
+
       {result && (
-        <section className="mt-10">
+        <section className={`mt-10 ${loading ? "opacity-50" : ""}`}>
           <p className="mb-3 text-sm text-stone-600">
-            {result.results.length} live GeM bids for “{result.query}”{result.cached ? " (cached)" : ""}. Badges
-            by Nemotron 3.5 Lightning.
+            {summary(result, ranked.length - likely.length, likely.length, scored, company?.name)}
           </p>
           {result.results.length === 0 && (
             <p className="rounded-lg border border-dashed border-stone-300 p-6 text-center text-stone-600">
@@ -169,7 +178,7 @@ export default function SearchPage() {
             </p>
           )}
           <ul className="divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">
-            {ranked.map((bid) => (
+            {visible.map((bid) => (
               <li key={bid.tender_id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -207,9 +216,54 @@ export default function SearchPage() {
               </li>
             ))}
           </ul>
+          {(hidden > 0 || showUnlikely) && (
+            <button
+              onClick={() => setShowUnlikely((v) => !v)}
+              className="mt-3 w-full rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 hover:border-ink hover:text-ink"
+            >
+              {showUnlikely
+                ? "Hide the bids that look unlikely"
+                : `Show ${hidden} more bid${hidden === 1 ? "" : "s"} that look unlikely (other products or out of reach)`}
+            </button>
+          )}
         </section>
       )}
     </div>
+  );
+}
+
+const CLOSEST_WHEN_NONE = 5;
+
+function summary(
+  result: SearchResponse,
+  unlikely: number,
+  likely: number,
+  scored: boolean,
+  companyName: string | undefined,
+): string {
+  const total = result.results.length;
+  if (total === 0) return `No open GeM bids for “${result.query}”.`;
+  const head = `${total} ${result.cached ? "recent" : "live"} GeM bids for “${result.query}”.`;
+  if (!scored) return `${head} Nemotron 3.5 Lightning is scoring each one for ${companyName ?? "your company"}…`;
+  if (likely === 0)
+    return `${head} None look like a good fit for ${companyName ?? "your company"}; the closest are below. Open one to see exactly why.`;
+  return `${head} ${likely} worth a look for ${companyName ?? "your company"}${unlikely ? `, ${unlikely} unlikely` : ""}. Badges by Nemotron 3.5 Lightning.`;
+}
+
+function ResultsSkeleton() {
+  return (
+    <section className="mt-10" aria-busy="true" aria-label="Loading bids">
+      <p className="mb-3 text-sm text-stone-600">Fetching live bids from GeM… this takes a few seconds.</p>
+      <ul className="divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">
+        {[0, 1, 2, 3].map((i) => (
+          <li key={i} className="animate-pulse space-y-2 p-4">
+            <div className="h-4 w-20 rounded-full bg-stone-200" />
+            <div className="h-4 w-3/4 rounded bg-stone-200" />
+            <div className="h-3 w-1/2 rounded bg-stone-100" />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
