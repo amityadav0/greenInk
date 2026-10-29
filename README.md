@@ -68,7 +68,7 @@ railway login
 infra/railway/deploy.sh          # Postgres, Redis, api, worker, web; prints the public URL
 ```
 
-The script reads the API keys from `.env`. For document storage, create a bucket in the Railway project canvas, then re-run with `BUCKET_ENDPOINT`, `BUCKET_ACCESS_KEY_ID`, `BUCKET_SECRET_ACCESS_KEY` and `BUCKET_NAME` set. The web app proxies `/v1` to the API over Railway's private network.
+GeM accepts only Indian IPs, so GeM traffic goes through a small relay on Vercel's Mumbai region (`infra/gem-relay`); set `GEM_RELAY_URL` and `GEM_RELAY_KEY` on the api and worker. The script reads the API keys from `.env`. For document storage, create a bucket in the Railway project canvas, then re-run with `BUCKET_ENDPOINT`, `BUCKET_ACCESS_KEY_ID`, `BUCKET_SECRET_ACCESS_KEY` and `BUCKET_NAME` set. The web app proxies `/v1` to the API over Railway's private network.
 
 ## Data sources and terms
 

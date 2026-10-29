@@ -10,7 +10,8 @@ Findings from `scripts/gem_spike.py`, run from a laptop in India on Oct 26, 2026
 - Documents: `/showbidDocument/{b_id}`. Reverse auctions use `/showradocumentPdf/{b_id}` (`b_bid_type` 2) or `/showdirectradocumentPdf/{b_id}` (type 5).
 - `searchType: "fullText"` matches loosely: "current transformer" also returns calibration services and hand files (149 hits, of which 14 had the phrase in the title). `searchType: "exact"` answers HTTP 404 on this endpoint. Filter by title on our side.
 - Sorting: `Bid-End-Date-Oldest` (the default) puts bids closing today first. `Bid-Start-Date-Latest` gives fresher bids.
-- At 1 request a second, 30 PDFs plus their search pages took about 2 minutes. No blocking was seen from an Indian residential IP. A cloud host has not been tested yet.
+- At 1 request a second, 30 PDFs plus their search pages took about 2 minutes. No blocking was seen from an Indian residential IP.
+- **GeM refuses connections from outside India.** Tested Oct 28-29 from inside Railway containers in the US (`us-west2`) and Singapore (`asia-southeast1`): TCP connect errors to bidplus.gem.gov.in and gem.gov.in, while other sites answered. From Vercel's Mumbai region (`bom1`, AWS ap-south-1) GeM answers normally (200 in 0.6 s, CSRF token and session cookies). Production therefore sends GeM traffic through `infra/gem-relay`.
 
 ## Bid documents
 
