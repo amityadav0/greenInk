@@ -13,7 +13,7 @@ endpoints and timings, not impressions.
 
 ## Nebius AI Cloud
 
-- **What we used it for:**
+- **What we used it for:** not used in this version; hosting is on Railway, and all model inference is on Token Factory.
 - **What worked:**
 - **What broke (exact error and endpoint):**
 - **Time from zero to first call:**
@@ -37,8 +37,8 @@ endpoints and timings, not impressions.
 
 ## NVIDIA Nemotron 3.5 Super VL (scanned pages, BoQ tables)
 
-- **What we used it for:**
-- **What worked:**
+- **What we used it for:** transcribing tender pages that have no text layer (scanned drawings and specification attachments), only when PyMuPDF finds under 50 characters on a page.
+- **What worked:** in production it read a scanned drawing attachment into text the extractor could use: one page, about 8.7k input tokens, $0.01, 21.6 s. Same OpenAI-compatible call with an image part; JSON output with `response_format` worked as for the text models.
 - **What broke (exact error and endpoint):**
 - **Time from zero to first call:**
 - **Would we build with it again, and why:**

@@ -4,7 +4,8 @@
 
 > Small factories don't lose government tenders on price. They lose on page 37.
 
-Demo URL, video and screenshot: coming with the Oct 28 production deploy.
+**Live demo:** https://web-production-65432.up.railway.app (no login; the demo company is fictional).
+Video: coming Oct 29.
 
 ## What it does
 
@@ -47,6 +48,11 @@ Every model call goes through one gateway (`packages/greenink/llm`) to Nebius To
 | Judge each requirement against the company; draft fixes | Nemotron 3 Ultra | The hardest reasoning step, once per report |
 
 The verdict (Bid / Fix then bid / Skip) is computed by code from the findings, never by a model. A requirement reaches the report only if its quote is found on its cited page.
+
+## Nebius services used
+
+- **Nebius Token Factory** (OpenAI-compatible API at `api.tokenfactory.nebius.com/v1/`) for every model call: four NVIDIA Nemotron models, one API key, prices and routing in `config/models.yaml`. Calls go through `packages/greenink/llm/gateway.py`.
+- No other Nebius services: the app is hosted on Railway (API, worker, Postgres, Redis, storage) with a GeM relay on Vercel's Mumbai region, because GeM only accepts Indian IPs.
 
 ## Architecture
 
