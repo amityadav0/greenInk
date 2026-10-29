@@ -31,6 +31,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [badges, setBadges] = useState<Record<string, TriageBadge>>({});
+  const [scored, setScored] = useState(false);
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,12 +51,17 @@ export default function SearchPage() {
       const initial: Record<string, TriageBadge> = {};
       for (const bid of response.results) if (bid.badge) initial[bid.source_ref] = bid.badge;
       setBadges(initial);
-      closeStream.current = subscribe(response.events_url, {
-        badge: (data) => {
-          const event = data as { source_ref: string; badge: TriageBadge };
-          setBadges((current) => ({ ...current, [event.source_ref]: event.badge }));
+      setScored(response.results.every((bid) => bid.badge));
+      closeStream.current = subscribe(
+        response.events_url,
+        {
+          badge: (data) => {
+            const event = data as { source_ref: string; badge: TriageBadge };
+            setBadges((current) => ({ ...current, [event.source_ref]: event.badge }));
+          },
         },
-      });
+        () => setScored(true),
+      );
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Search failed. Please try again.");
     } finally {
@@ -91,7 +97,7 @@ export default function SearchPage() {
   }
 
   const ranked = result
-    ? [...result.results].sort((a, b) => rank(badges[a.source_ref]) - rank(badges[b.source_ref]))
+    ? [...result.results].sort((a, b) => rank(badges[a.source_ref], scored) - rank(badges[b.source_ref], scored))
     : [];
 
   return (
@@ -167,7 +173,7 @@ export default function SearchPage() {
               <li key={bid.tender_id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <WinBadge badge={badges[bid.source_ref]} />
+                    <WinBadge badge={badges[bid.source_ref]} pending={!scored} />
                     <span className="text-xs text-stone-500">{bid.source_ref}</span>
                   </div>
                   <p className="mt-1 font-medium leading-snug [overflow-wrap:anywhere]">{bid.title}</p>
@@ -207,7 +213,8 @@ export default function SearchPage() {
   );
 }
 
-function rank(badge: TriageBadge | undefined): number {
-  if (!badge) return 1;
-  return { green: 0, amber: 1, red: 2 }[badge.level];
+/** Winnable first, then stretch, then anything left unscored, then unlikely. */
+function rank(badge: TriageBadge | undefined, scored: boolean): number {
+  if (!badge) return scored ? 2 : 1;
+  return { green: 0, amber: 1, red: 3 }[badge.level];
 }
