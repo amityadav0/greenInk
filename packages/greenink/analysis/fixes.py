@@ -1,4 +1,4 @@
-"""Drafted fixes for failing findings, with the `fix` task (prompt: prompts/fix.v1.md)."""
+"""Drafted fixes for failing findings, with the `fix` task (prompt: prompts/fix.v2.md)."""
 
 from uuid import UUID
 
@@ -9,7 +9,7 @@ from greenink.llm.port import LLM, LLMInput
 
 
 class LLMFixer:
-    version = "fix.v1"
+    version = "fix.v2"
 
     def __init__(self, llm: LLM) -> None:
         self._llm = llm

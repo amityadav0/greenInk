@@ -34,6 +34,8 @@ export default function PdfViewer({ url, page, quote }: { url: string; page: num
   const [current, setCurrent] = useState(page);
   const [failed, setFailed] = useState(false);
   const container = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const centred = useRef<number | null>(null);
   const [width, setWidth] = useState(560);
   const needle = useMemo(() => normalise(quote), [quote]);
 
@@ -50,6 +52,17 @@ export default function PdfViewer({ url, page, quote }: { url: string; page: num
     },
     [needle, current, page],
   );
+
+  // Scroll only the viewer's own box, once per page: scrollIntoView also scrolled the window,
+  // and re-ran on every re-render (opening a fix), jumping the report back to the top.
+  const centreQuote = useCallback(() => {
+    const box = scroller.current;
+    const mark = box?.querySelector<HTMLElement>("mark.quote");
+    if (!box || !mark || centred.current === current) return;
+    centred.current = current;
+    const offset = mark.getBoundingClientRect().top - box.getBoundingClientRect().top;
+    box.scrollTo({ top: box.scrollTop + offset - box.clientHeight / 2, behavior: "smooth" });
+  }, [current]);
 
   if (failed) {
     return (
@@ -90,7 +103,7 @@ export default function PdfViewer({ url, page, quote }: { url: string; page: num
           Next ›
         </button>
       </div>
-      <div className="overflow-hidden rounded border border-stone-200 bg-white">
+      <div ref={scroller} className="max-h-[calc(100vh-9rem)] overflow-y-auto rounded border border-stone-200 bg-white">
         <Document
           file={url}
           onLoadSuccess={({ numPages }) => setPages(numPages)}
@@ -101,9 +114,7 @@ export default function PdfViewer({ url, page, quote }: { url: string; page: num
             pageNumber={current}
             width={width}
             customTextRenderer={renderText}
-            onRenderTextLayerSuccess={() =>
-              container.current?.querySelector("mark.quote")?.scrollIntoView({ block: "center", behavior: "smooth" })
-            }
+            onRenderTextLayerSuccess={centreQuote}
           />
         </Document>
       </div>

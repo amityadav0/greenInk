@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError, type AnalysisTrace, type Finding, type Fix, type JobEvent, type Schemas } from "@/lib/api";
+import { plainWords, readableQuote } from "@/lib/text";
 
 type Verdict = NonNullable<Schemas["Analysis"]["verdict"]>;
 
@@ -113,14 +114,14 @@ export function FindingsTable({
               </button>
             </div>
             <p className="mt-2 font-medium">{f.requirement.text}</p>
-            <blockquote className="mt-1 border-l-2 border-stone-300 pl-3 text-sm italic text-stone-600">
-              “{f.requirement.quote}”
+            <blockquote className="mt-1 whitespace-pre-line border-l-2 border-stone-300 pl-3 text-sm italic text-stone-600">
+              “{readableQuote(f.requirement.quote)}”
             </blockquote>
             <p className="mt-2 text-sm">
               <span className="text-stone-500">You have: </span>
-              {f.evidence.company_has}
+              {plainWords(f.evidence.company_has)}
             </p>
-            {f.status !== "pass" && <p className="mt-1 text-sm text-stone-700">{f.reason}</p>}
+            {f.status !== "pass" && <p className="mt-1 text-sm text-stone-700">{plainWords(f.reason)}</p>}
             {f.status !== "pass" && (
               <button onClick={() => onFix(f)} className="no-print mt-3 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white">
                 {f.fix ? "View the fix" : "Draft the fix"}
@@ -171,18 +172,18 @@ export function FixDialog({ analysisId, finding, onClose }: { analysisId: string
         {error && <p className="mt-2 text-block">{error}</p>}
         {fix && (
           <>
-            <h2 className="mt-1 text-xl font-semibold">{fix.title}</h2>
-            <pre className="mt-3 whitespace-pre-wrap rounded-md bg-stone-50 p-3 font-sans text-sm leading-relaxed">{fix.body}</pre>
+            <h2 className="mt-1 text-xl font-semibold">{plainWords(fix.title)}</h2>
+            <pre className="mt-3 whitespace-pre-wrap rounded-md bg-stone-50 p-3 font-sans text-sm leading-relaxed">{plainWords(fix.body)}</pre>
             {(fix.steps ?? []).length > 0 && (
               <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm">
                 {(fix.steps ?? []).map((step) => (
-                  <li key={step}>{step}</li>
+                  <li key={step}>{plainWords(step)}</li>
                 ))}
               </ol>
             )}
             <button
               className="mt-4 rounded-md border border-stone-300 px-3 py-1.5 text-sm"
-              onClick={() => void navigator.clipboard?.writeText(fix.body)}
+              onClick={() => void navigator.clipboard?.writeText(plainWords(fix.body))}
             >
               Copy text
             </button>
