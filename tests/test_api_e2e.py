@@ -6,6 +6,7 @@ Real Postgres, Redis, queues and SSE; fake LLM and fake GeM, so no credits.
 import asyncio
 import json
 import threading
+import time
 from collections.abc import Iterator
 from typing import Any
 
@@ -331,3 +332,47 @@ def test_search_falls_back_to_stored_bids_when_gem_is_unreachable(
     nothing = client.get("/v1/search", params={"q": "office chair"})
     assert nothing.status_code == 502
     assert nothing.json()["code"] == "upstream_unavailable"
+
+
+def test_slow_gem_search_falls_back_to_the_last_good_result(
+    env: tuple[TestClient, MemoryBlobStore], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, _ = env
+    services = client.app.state.services  # type: ignore[attr-defined]
+    live = client.get("/v1/search", params={"q": "current transformer"}).json()
+
+    gem = services.sources.adapters.gem.model_copy(update={"search_deadline_s": 0.05})
+    adapters = services.sources.adapters.model_copy(update={"gem": gem})
+    monkeypatch.setattr(services, "sources", services.sources.model_copy(update={"adapters": adapters}))
+
+    async def hangs(query: str) -> list[Any]:
+        await asyncio.sleep(5)
+        return []
+
+    services.gem.search = hangs
+    # The 30-minute cache has expired; the 7-day last good result remains.
+    asyncio.run(_delete(services.settings.redis_url, "search:gem:current transformer"))
+    started = time.monotonic()
+    slow = client.get("/v1/search", params={"q": "current transformer"})
+    assert time.monotonic() - started < 3, "a hung GeM must not hold the request"
+    assert slow.status_code == 200, slow.text
+    assert slow.json()["cached"] is True
+    assert [r["tender_id"] for r in slow.json()["results"]] == [r["tender_id"] for r in live["results"]]
+
+    unknown = client.get("/v1/search", params={"q": "office chair"})
+    assert unknown.status_code == 502
+    assert unknown.json() == {
+        "code": "upstream_unavailable",
+        "message": "GeM is responding slowly. Please try again shortly.",
+        "retryable": True,
+    }
+
+
+async def _delete(redis_url: str, key: str) -> None:
+    from redis.asyncio import Redis
+
+    redis = Redis.from_url(redis_url)
+    try:
+        await redis.delete(key)
+    finally:
+        await redis.aclose()

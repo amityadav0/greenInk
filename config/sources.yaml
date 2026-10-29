@@ -8,6 +8,8 @@ adapters:
     max_retries: 3
     user_agent: "GreenInk/0.1 (+https://github.com/amityadav0/greenInk; tender research tool)"
     search_cache_ttl_s: 1800     # search cache key: (adapter, normalised query)
+    search_deadline_s: 20        # a slower live search falls back to the last good result
+    last_good_ttl_s: 604800      # that fallback is kept for 7 days
     max_results: 50
   upload:
     enabled: true

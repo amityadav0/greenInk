@@ -19,6 +19,10 @@ class GemConfig(_Config):
     user_agent: str
     search_cache_ttl_s: int = Field(gt=0)
     max_results: int = Field(gt=0)
+    search_deadline_s: float = Field(default=20, gt=0)
+    """Wall-clock cap on one live search (retries included) before falling back."""
+    last_good_ttl_s: int = Field(default=7 * 24 * 3600, gt=0)
+    """How long the last successful result for a query is kept as a fallback."""
 
 
 class UploadConfig(_Config):

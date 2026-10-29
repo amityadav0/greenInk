@@ -66,7 +66,9 @@ async def search(
     if owned is None or not owned.visible_to(session):
         raise GreenInkError(ErrorCode.NOT_FOUND, "That company was not found.")
 
+    gem = app.sources.adapters.gem
     cache_key = f"search:gem:{query}"
+    last_good_key = f"search:gem:last:{query}"
     cached_raw = await app.redis.get(cache_key)
     offline = False
     if cached_raw:
@@ -74,26 +76,39 @@ async def search(
     else:
         await check_limit(request, SEARCH_LIMIT)
         try:
-            tenders = await app.gem.search(query)
-        except GreenInkError as exc:
-            if exc.code != ErrorCode.UPSTREAM_UNAVAILABLE:
+            tenders = await asyncio.wait_for(app.gem.search(query), timeout=gem.search_deadline_s)
+        except (GreenInkError, TimeoutError) as exc:
+            if isinstance(exc, GreenInkError) and exc.code != ErrorCode.UPSTREAM_UNAVAILABLE:
                 raise
-            # SPEC: search falls back to the cached corpus when the source is unreachable.
-            async with app.sessions() as db:
-                tenders = await repos.search_stored_tenders(db, query)
-            log.warning("search_fallback_corpus", query=query, results=len(tenders))
+            # SPEC: search falls back to the cached corpus when the source is unreachable (or
+            # too slow): this query's last good result, else stored bids that match it.
+            last_good = await app.redis.get(last_good_key)
+            if last_good:
+                tenders = [Tender.model_validate(t) for t in json.loads(last_good)]
+            else:
+                async with app.sessions() as db:
+                    tenders = await repos.search_stored_tenders(db, query)
+            log.warning(
+                "search_fallback",
+                query=query,
+                results=len(tenders),
+                last_good=bool(last_good),
+                cause=type(exc).__name__,
+            )
             if not tenders:
+                if isinstance(exc, TimeoutError):
+                    raise GreenInkError(
+                        ErrorCode.UPSTREAM_UNAVAILABLE, "GeM is responding slowly. Please try again shortly."
+                    ) from exc
                 raise
             offline = True
         else:
-            offline = False
             async with app.sessions.begin() as db:
                 await repos.upsert_tenders(db, tenders)
-            await app.redis.set(
-                cache_key,
-                json.dumps([t.model_dump(mode="json") for t in tenders]),
-                ex=app.sources.adapters.gem.search_cache_ttl_s,
-            )
+            payload = json.dumps([t.model_dump(mode="json") for t in tenders])
+            await app.redis.set(cache_key, payload, ex=gem.search_cache_ttl_s)
+            if tenders:
+                await app.redis.set(last_good_key, payload, ex=gem.last_good_ttl_s)
 
     search_id = uuid5(NAMESPACE_URL, f"greenink:search:{query}:{company_id}")
     badges, done = await _badges(request, search_id)
