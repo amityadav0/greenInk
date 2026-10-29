@@ -93,12 +93,19 @@ def on_product_list(title: str, keys: list[frozenset[str]]) -> bool:
     return any(key <= words for key in keys)
 
 
-def check_green(badge: TriageBadge, title: str, keys: list[frozenset[str]]) -> TriageBadge:
-    """Green only for bids on the company's product list; the model alone matched relays and
-    insulators to a CT maker. Without a product list there is nothing to check."""
-    if badge.level != TriageLevel.GREEN or not keys or on_product_list(title, keys):
+def check_badge(badge: TriageBadge, title: str, keys: list[frozenset[str]]) -> TriageBadge:
+    """The product list is the strongest signal, so it bounds the model both ways: green
+    needs the bid to be on the list (the model alone matched relays and insulators to a CT
+    maker), and a bid on the list is never red (it wrote off real CTs over a guessed voltage).
+    Without a product list there is nothing to check."""
+    if not keys:
         return badge
-    return TriageBadge(level=TriageLevel.AMBER, reason=f"Not on your product list. {badge.reason}"[:200])
+    listed = on_product_list(title, keys)
+    if badge.level == TriageLevel.GREEN and not listed:
+        return TriageBadge(level=TriageLevel.AMBER, reason=f"Not on your product list. {badge.reason}"[:200])
+    if badge.level == TriageLevel.RED and listed:
+        return TriageBadge(level=TriageLevel.AMBER, reason=f"Your product type, but: {badge.reason}"[:200])
+    return badge
 
 
 class LLMTriage:
@@ -122,7 +129,7 @@ class LLMTriage:
         keys = product_keys(profile.products)
         titles = {b.source_ref: b.title for b in bids}
         return {
-            ref: check_green(badge, titles[ref], keys) for result in results for ref, badge in result.items()
+            ref: check_badge(badge, titles[ref], keys) for result in results for ref, badge in result.items()
         }
 
     async def _batch(self, batch: list[BidSummary], company: str) -> dict[str, TriageBadge]:

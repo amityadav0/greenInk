@@ -29,10 +29,23 @@ BADGE_RANK = {"green": 0, "amber": 1, "red": 2}
 EST_PER_REPORT_USD = 0.08
 
 
+def get_json(client: httpx.Client, path: str, **kwargs: object) -> dict[str, object]:
+    """GET with retries: a restarting service can answer with an HTML error page."""
+    for attempt in range(5):
+        response = client.get(path, **kwargs)  # type: ignore[arg-type]
+        if response.status_code < 500 and response.headers.get("content-type", "").startswith(
+            "application/json"
+        ):
+            body: dict[str, object] = response.json()
+            return body
+        time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"{path} kept failing: HTTP {response.status_code} {response.text[:120]!r}")
+
+
 def wait_for_badges(client: httpx.Client, query: str, timeout_s: float = 60) -> list[dict[str, object]]:
     deadline = time.monotonic() + timeout_s
     while True:
-        results: list[dict[str, object]] = client.get("/v1/search", params={"q": query}).json()["results"]
+        results: list[dict[str, object]] = get_json(client, "/v1/search", params={"q": query})["results"]  # type: ignore[assignment]
         if all(r.get("badge") for r in results) or time.monotonic() > deadline:
             return results
         time.sleep(3)
@@ -41,7 +54,7 @@ def wait_for_badges(client: httpx.Client, query: str, timeout_s: float = 60) -> 
 def wait_for_report(client: httpx.Client, status_url: str, timeout_s: float = 240) -> dict[str, object]:
     deadline = time.monotonic() + timeout_s
     while True:
-        analysis: dict[str, object] = client.get(status_url).json()["analysis"]
+        analysis: dict[str, object] = get_json(client, status_url)["analysis"]  # type: ignore[assignment]
         if analysis["status"] in ("done", "partial", "failed") or time.monotonic() > deadline:
             return analysis
         time.sleep(5)
@@ -72,7 +85,7 @@ def main() -> int:
     with httpx.Client(
         base_url=args.base_url.rstrip("/"), timeout=120, follow_redirects=True, headers=headers
     ) as client:
-        demo = client.get("/v1/companies").json()[0]
+        demo = client.get("/v1/companies").json()[0]  # a list, not an object
         report_queries = {q.strip().lower() for q in args.report_queries.split(",") if q.strip()}
         candidates: list[tuple[int, dict[str, object]]] = []
         for query in SUGGESTIONS:
