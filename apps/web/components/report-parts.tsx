@@ -21,10 +21,13 @@ const HEADLINE: Record<Verdict, (count: number) => string> = {
 export function VerdictCard({
   analysis,
   findings,
+  focus,
   onCite,
 }: {
   analysis: Schemas["Analysis"];
   findings: Finding[];
+  /** A finding to list first, e.g. the one a featured-report link points at. */
+  focus?: string | null;
   onCite: (finding: Finding) => void;
 }) {
   const { verdict, verdict_reason: reason, status } = analysis;
@@ -43,7 +46,7 @@ export function VerdictCard({
     );
   }
   const style = VERDICT_STYLE[verdict];
-  const deciding = decidingFindings(analysis, findings);
+  const deciding = decidingFindings(analysis, findings, focus);
   return (
     <div className={`rounded-xl border-2 p-5 ${style.className}`}>
       <p className="text-sm font-medium uppercase tracking-wide opacity-80">Verdict, computed by rules from the findings</p>
@@ -52,7 +55,10 @@ export function VerdictCard({
       {deciding.length > 0 && (
         <ul className="mt-3 space-y-2">
           {deciding.slice(0, TOP_BLOCKERS).map((f) => (
-            <li key={f.id} className="flex items-start gap-3 rounded-lg bg-white/70 p-3 text-sm text-stone-800">
+            <li
+              key={f.id}
+              className={`flex items-start gap-3 rounded-lg bg-white/70 p-3 text-sm text-stone-800 ${f.id === focus ? "ring-2 ring-current" : ""}`}
+            >
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{plainWords(f.requirement.text)}</p>
                 <p className="mt-0.5 text-stone-600">{plainWords(f.reason)}</p>
@@ -83,11 +89,14 @@ function byRisk(a: Finding, b: Finding): number {
   return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || STATUS_RANK[a.status] - STATUS_RANK[b.status];
 }
 
-/** The findings the fired verdict rule cites (skip rules before fix rules), most severe first. */
-function decidingFindings(analysis: Schemas["Analysis"], findings: Finding[]): Finding[] {
+/** The findings the fired verdict rule cites, most severe first; `focus` leads (and survives
+ * de-duplication) when it is one of them. */
+function decidingFindings(analysis: Schemas["Analysis"], findings: Finding[], focus?: string | null): Finding[] {
   const rule = (analysis.verdict_rules ?? []).find((r) => r.verdict === analysis.verdict);
   const ids = new Set(rule?.finding_ids ?? []);
-  return dedupe(findings.filter((f) => ids.has(f.id)).sort(byRisk)).map((g) => g.finding);
+  const cited = findings.filter((f) => ids.has(f.id)).sort(byRisk);
+  const ordered = [...cited.filter((f) => f.id === focus), ...cited.filter((f) => f.id !== focus)];
+  return dedupe(ordered).map((g) => g.finding);
 }
 
 const STAGE_LABEL: Record<string, string> = {

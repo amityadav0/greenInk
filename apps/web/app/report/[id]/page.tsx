@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { FindingsTable, FixDialog, PricePanel, Stages, TraceDrawer, VerdictCard } from "@/components/report-parts";
 import {
   api,
@@ -24,7 +24,18 @@ const PdfViewer = dynamic(() => import("@/components/pdf-viewer"), {
 type Citation = { url: string; page: number; quote: string; filename: string };
 
 export default function ReportPage() {
+  // useSearchParams needs a Suspense boundary in the App Router.
+  return (
+    <Suspense fallback={<p className="py-16 text-center text-stone-500">Loading report…</p>}>
+      <Report />
+    </Suspense>
+  );
+}
+
+function Report() {
   const { id } = useParams<{ id: string }>();
+  const focus = useSearchParams().get("focus");
+  const focusOpened = useRef(false);
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [tender, setTender] = useState<TenderDetail | null>(null);
   const [events, setEvents] = useState<JobEvent[]>([]);
@@ -83,6 +94,16 @@ export default function ReportPage() {
     });
   }
 
+  // A link that points at one finding opens its citation once, on screens wide enough to show
+  // the PDF beside the report (on phones the viewer would cover the verdict).
+  useEffect(() => {
+    if (!focus || focusOpened.current || !report || !tender) return;
+    focusOpened.current = true;
+    const finding = report.findings.find((f) => f.id === focus);
+    if (finding && window.matchMedia("(min-width: 1024px)").matches) cite(finding);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, report, tender]);
+
   if (error) {
     return (
       <div className="mx-auto max-w-xl py-16 text-center">
@@ -122,7 +143,7 @@ export default function ReportPage() {
           </p>
         </div>
 
-        <VerdictCard analysis={analysis} findings={report.findings} onCite={cite} />
+        <VerdictCard analysis={analysis} findings={report.findings} focus={focus} onCite={cite} />
 
         <section className="rounded-xl border border-stone-200 bg-white p-4">
           <Stages events={stageEvents} />

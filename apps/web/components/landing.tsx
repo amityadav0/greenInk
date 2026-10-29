@@ -76,7 +76,7 @@ export function FeaturedReports() {
           return (
             <li key={report.analysis.id}>
               <Link
-                href={`/report/${report.analysis.id}`}
+                href={`/report/${report.analysis.id}${row ? `?focus=${row.id}` : ""}`}
                 className="block rounded-xl border border-stone-200 bg-white p-4 hover:border-ink"
               >
                 <div className="flex flex-wrap items-center gap-2">
