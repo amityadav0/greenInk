@@ -70,13 +70,16 @@ export default function ReportPage() {
   }
 
   function cite(finding: Finding) {
-    const document = tender?.documents.find((d) => d.id === finding.requirement.document_id) ?? tender?.documents[0];
+    const documents = tender?.documents ?? [];
+    const index = Math.max(0, documents.findIndex((d) => d.id === finding.requirement.document_id));
+    const document = documents[index];
     if (!document) return;
     setCitation({
       url: document.download_url,
       page: finding.requirement.page_no,
       quote: finding.requirement.quote,
-      filename: document.filename,
+      // GeM attachment filenames are opaque hashes; name documents as the stages do.
+      filename: index === 0 ? "Bid document" : `Attachment ${index}`,
     });
   }
 
