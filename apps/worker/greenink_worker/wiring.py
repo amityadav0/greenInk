@@ -29,7 +29,7 @@ from greenink.llm.router import load_models_config
 from greenink.llm.trace import SqlTraceStore
 from greenink.sources.base import SourceAdapter
 from greenink.sources.config import load_sources_config
-from greenink.sources.gem import GemBidplusAdapter, RateLimiter
+from greenink.sources.gem import RateLimiter, gem_adapter
 from greenink.storage.blob import S3BlobStore
 from greenink.storage.port import BlobStore
 from greenink.triage.port import Triage
@@ -93,11 +93,7 @@ async def build(settings: Settings) -> Services:
     blobs = blob_store(settings)
     await blobs.ensure_bucket()
     gem_config = sources.adapters.gem
-    gem = GemBidplusAdapter(
-        gem_config,
-        RateLimiter(gem_config.rate_limit_rps, redis),
-        proxy=settings.gem_proxy_url.get_secret_value() if settings.gem_proxy_url else None,
-    )
+    gem = gem_adapter(gem_config, RateLimiter(gem_config.rate_limit_rps, redis), settings)
     return Services(
         settings=settings,
         engine=engine,

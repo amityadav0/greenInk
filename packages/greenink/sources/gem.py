@@ -22,6 +22,7 @@ from greenink.core.enums import ErrorCode, TenderSource
 from greenink.core.errors import GreenInkError
 from greenink.core.ids import tender_id
 from greenink.core.models import Tender
+from greenink.core.settings import Settings
 from greenink.sources.base import SourceFile, TenderDoc
 from greenink.sources.config import GemConfig
 
@@ -43,6 +44,45 @@ ATTACHMENT_PATTERNS = (
     re.compile(r"^https://mkp\.gem\.gov\.in/.*(buyer_documents|uploaded_documents)/"),
     re.compile(r"^https://bidplus\.gem\.gov\.in/resources/upload_nas/.*\.(xlsx|pdf)$", re.IGNORECASE),
 )
+
+
+class RelayTransport(httpx.AsyncBaseTransport):
+    """Sends each request to the GeM relay (infra/gem-relay, Vercel Mumbai) with the real URL in
+    `x-target-url`. The response is returned against the original request, so httpx's cookie
+    jar and redirect handling behave exactly as if GeM had answered directly."""
+
+    def __init__(self, relay_url: str, key: str, inner: httpx.AsyncBaseTransport | None = None) -> None:
+        self._relay = httpx.URL(relay_url)
+        self._key = key
+        self._inner = inner or httpx.AsyncHTTPTransport(retries=1)
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        headers = [(k, v) for k, v in request.headers.raw if k.lower() not in (b"host", b"content-length")]
+        headers += [(b"x-target-url", str(request.url).encode()), (b"x-relay-key", self._key.encode())]
+        relayed = httpx.Request(
+            request.method,
+            self._relay,
+            headers=headers,
+            content=await request.aread(),
+            extensions=request.extensions,
+        )
+        response = await self._inner.handle_async_request(relayed)
+        content = await response.aread()
+        if response.status_code in (401, 403) and content in (b"unauthorised", b"target not allowed"):
+            raise httpx.ConnectError(f"GeM relay refused the request: {content.decode()}", request=request)
+        return httpx.Response(
+            response.status_code,
+            headers=[
+                (k, v)
+                for k, v in response.headers.raw
+                if k.lower() not in (b"content-encoding", b"transfer-encoding", b"content-length")
+            ],
+            content=content,
+            request=request,
+        )
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
 
 
 class RateLimiter:
@@ -302,3 +342,12 @@ class GemBidplusAdapter:
                 )
             )
         return TenderDoc(tender=tender, files=files)
+
+
+def gem_adapter(config: GemConfig, limiter: RateLimiter, settings: Settings) -> GemBidplusAdapter:
+    """The adapter with whichever route to GeM is configured: relay, proxy, or direct."""
+    if settings.gem_relay_url and settings.gem_relay_key:
+        relay = RelayTransport(settings.gem_relay_url, settings.gem_relay_key.get_secret_value())
+        return GemBidplusAdapter(config, limiter, transport=relay)
+    proxy = settings.gem_proxy_url.get_secret_value() if settings.gem_proxy_url else None
+    return GemBidplusAdapter(config, limiter, proxy=proxy)

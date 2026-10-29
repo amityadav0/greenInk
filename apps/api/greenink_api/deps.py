@@ -22,7 +22,7 @@ from greenink.jobs.port import EventBus, JobQueue
 from greenink.jobs.queue import ArqJobQueue
 from greenink.sources.base import SourceAdapter
 from greenink.sources.config import SourcesConfig, load_sources_config
-from greenink.sources.gem import GemBidplusAdapter, RateLimiter
+from greenink.sources.gem import RateLimiter, gem_adapter
 from greenink.storage.blob import S3BlobStore
 from greenink.storage.port import BlobStore
 
@@ -73,11 +73,7 @@ async def build_state(settings: Settings) -> AppState:
             settings.r2_secret_access_key or SecretStr(""),
             settings.r2_addressing_style,
         ),
-        gem=GemBidplusAdapter(
-            gem,
-            RateLimiter(gem.rate_limit_rps, redis),
-            proxy=settings.gem_proxy_url.get_secret_value() if settings.gem_proxy_url else None,
-        ),
+        gem=gem_adapter(gem, RateLimiter(gem.rate_limit_rps, redis), settings),
         sources=sources,
     )
 

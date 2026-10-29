@@ -1,0 +1,6 @@
+{
+  "name": "greenink-gem-relay",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" }
+}

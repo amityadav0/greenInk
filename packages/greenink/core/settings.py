@@ -36,6 +36,9 @@ class Settings(BaseModel):
     gem_proxy_url: SecretStr | None = None
     """HTTP(S) proxy for GeM traffic only, e.g. http://user:pass@in-host:3128 (GeM blocks many
     non-Indian IPs). Secret because it carries credentials."""
+    gem_relay_url: str | None = None
+    """GeM relay endpoint (infra/gem-relay on Vercel Mumbai); takes precedence over the proxy."""
+    gem_relay_key: SecretStr | None = None
     rate_limit_exempt_token: SecretStr | None = None
     """Operators (pre-warm script) send it as X-Greenink-Admin to skip per-IP limits."""
     web_origin: str = "http://localhost:3000"
