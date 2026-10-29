@@ -54,6 +54,11 @@ def main() -> int:
     parser.add_argument("base_url", help="the deployed web app (it proxies /v1 to the API)")
     parser.add_argument("--reports", type=int, default=20, help="reports to open in total")
     parser.add_argument("--yes", action="store_true", help="don't ask before spending credits")
+    parser.add_argument(
+        "--report-queries",
+        default="current transformer,potential transformer",
+        help="comma list: only these searches get reports (the demo company's own products)",
+    )
     args = parser.parse_args()
 
     if not args.yes:
@@ -68,14 +73,22 @@ def main() -> int:
         base_url=args.base_url.rstrip("/"), timeout=120, follow_redirects=True, headers=headers
     ) as client:
         demo = client.get("/v1/companies").json()[0]
+        report_queries = {q.strip().lower() for q in args.report_queries.split(",") if q.strip()}
         candidates: list[tuple[int, dict[str, object]]] = []
         for query in SUGGESTIONS:
             results = wait_for_badges(client, query)
             badges = [r["badge"]["level"] for r in results if r.get("badge")]  # type: ignore[index]
             print(f"search {query!r}: {len(results)} bids, {badges.count('green')} green")
+            if query.lower() not in report_queries:
+                continue
             for bid in results:
                 badge = bid.get("badge") or {"level": "red"}
-                candidates.append((BADGE_RANK[badge["level"]], bid))  # type: ignore[index]
+                level = badge["level"]  # type: ignore[index]
+                # Only bids that are really for this product and not judged out of reach:
+                # anything else spends credits on reports nobody will open.
+                if level == "red" or query.lower() not in " ".join(str(bid["title"]).lower().split()):
+                    continue
+                candidates.append((BADGE_RANK[level], bid))
 
         candidates.sort(key=lambda c: c[0])
         opened = 0

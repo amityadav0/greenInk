@@ -28,6 +28,10 @@ For every bid, give a badge:
   amber at best, never green.
 - "red": not what the company makes, or clearly out of reach.
 
+Decide by the item's product type, not by shared words: a "current sensitive relay", a
+"current injection kit" or "calibration of current transformers" is a relay, a test kit or a
+service, not a current transformer, so it is red for a CT manufacturer.
+
 "reason": at most 15 words, naming the deciding fact, for example "Makes 11 kV CTs; 6 units
 is well within capacity."
 
